@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DealBridge — Smart Partner Deal Discovery & Savings Platform</title>
+    <meta name="description" content="Compare partner prices, unlock exclusive discounts, and get instant redemption codes on DealBridge.">
+    <link rel="icon" href="/assets/images/logo.jpg" type="image/jpeg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+    <header id="app-header"></header>
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <h1 class="hero__title">Smarter Choices, Better Products</h1>
+                <p class="hero__subtitle">Compare prices across top e-commerce partners, unlock exclusive platform discounts, and redeem instant promo codes.</p>
+                <div class="hero__search">
+                    <form action="/search.html" method="get" class="search-box" style="box-shadow: var(--shadow-md);">
+                        <input type="search" name="q" placeholder="Search laptops, smartphones, headphones, fashion..." required style="padding: 14px 20px; font-size: 1rem;">
+                        <button type="submit" class="btn btn-primary" style="padding: 0 24px;">Search Products</button>
+                    </form>
+                </div>
+                <div class="hero__cta">
+                    <a href="/search.html" class="btn btn-primary btn-lg">🛍️ Browse All Products</a>
+                    <a href="#how-it-works" class="btn btn-secondary btn-lg">💡 How It Works</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Categories Section -->
+        <section class="section">
+            <div class="container">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-lg);">
+                    <h2 class="section-title" style="margin-bottom: 0;">Explore by Category</h2>
+                    <span style="color: var(--color-text-secondary); font-size: var(--font-size-sm);">8 curated departments</span>
+                </div>
+                <div id="home-categories" class="category-grid"></div>
+            </div>
+        </section>
+
+        <!-- Featured Deals -->
+        <section class="section" style="background-color: var(--color-surface); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);">
+            <div class="container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
+                    <div>
+                        <h2 class="section-title" style="margin-bottom: var(--space-xs);">Featured Partner Deals</h2>
+                        <p style="margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-sm);">Hand-picked top tier tech, accessories, and essentials</p>
+                    </div>
+                    <a href="/search.html" class="btn btn-ghost btn-sm" style="color: var(--color-primary); font-weight: 600;">View All Products →</a>
+                </div>
+                <div id="home-featured" class="product-grid"></div>
+            </div>
+        </section>
+
+        <!-- Best Discounts -->
+        <section class="section">
+            <div class="container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
+                    <div>
+                        <div class="badge badge-discount mb-xs" style="display: inline-block;">🔥 Maximum Savings</div>
+                        <h2 class="section-title" style="margin-bottom: var(--space-xs);">Biggest Price Drops</h2>
+                        <p style="margin: 0; color: var(--color-text-secondary); font-size: var(--font-size-sm);">Highest discount percentage compared to partner retail prices</p>
+                    </div>
+                    <a href="/search.html" class="btn btn-ghost btn-sm" style="color: var(--color-primary); font-weight: 600;">Explore More →</a>
+                </div>
+                <div id="home-best-deals" class="product-grid"></div>
+            </div>
+        </section>
+
+        <!-- Partner Showcase -->
+        <section class="section" style="background-color: var(--color-surface); border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border);">
+            <div class="container">
+                <div style="text-align: center; max-width: 600px; margin: 0 auto var(--space-2xl);">
+                    <h2 class="section-title" style="margin-bottom: var(--space-xs);">Our Partner Network</h2>
+                    <p style="color: var(--color-text-secondary); margin: 0;">We aggregate and compare offers from certified e-commerce retailers to secure the best rates</p>
+                </div>
+                <div id="home-partners" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));"></div>
+            </div>
+        </section>
+
+        <!-- Why Choose DealBridge -->
+        <section id="how-it-works" class="section">
+            <div class="container">
+                <div style="text-align: center; max-width: 600px; margin: 0 auto var(--space-2xl);">
+                    <h2 class="section-title" style="margin-bottom: var(--space-xs);">How DealBridge Works</h2>
+                    <p style="color: var(--color-text-secondary); margin: 0;">A simple 4-step workflow that saves you money on every order</p>
+                </div>
+                <div class="benefits-grid">
+                    <div class="benefit-card">
+                        <div class="benefit-card__icon">🔍</div>
+                        <h3 class="benefit-card__title">1. Search & Compare</h3>
+                        <p class="benefit-card__text">Search products and instantly see real-time price comparisons across multiple retail partners in one place.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-card__icon">💰</div>
+                        <h3 class="benefit-card__title">2. Exclusive Platform Pricing</h3>
+                        <p class="benefit-card__text">Get our platform's exclusive negotiated price — guaranteed lower than direct partner retail prices.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-card__icon">🎟️</div>
+                        <h3 class="benefit-card__title">3. Instant Redemption Code</h3>
+                        <p class="benefit-card__text">Place your simulated order and receive an official partner redemption code with copy-to-clipboard functionality.</p>
+                    </div>
+                    <div class="benefit-card">
+                        <div class="benefit-card__icon">🚚</div>
+                        <h3 class="benefit-card__title">4. Partner Fulfillment</h3>
+                        <p class="benefit-card__text">Redeem on the partner platform where your delivery and customer warranty are fulfilled directly.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <footer id="app-footer"></footer>
+    <script type="module" src="/js/pages/home.js"></script>
+</body>
+</html>

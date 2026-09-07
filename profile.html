@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile — DealBridge</title>
+    <meta name="description" content="Manage your DealBridge profile.">
+    <link rel="icon" href="/assets/images/logo.jpg" type="image/jpeg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+    <header id="app-header"></header>
+    <main class="sidebar-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li class="sidebar-nav__item"><a href="/profile.html" class="active">👤 Profile</a></li>
+                    <li class="sidebar-nav__item"><a href="/orders.html">📦 Orders</a></li>
+                    <li class="sidebar-nav__item"><a href="/wishlist.html">❤️ Wishlist</a></li>
+                    <li class="sidebar-nav__item"><a href="/addresses.html">📍 Addresses</a></li>
+                    <li class="sidebar-nav__item"><a href="/promo-codes.html">🎟️ Promo Codes</a></li>
+                    <li class="sidebar-nav__item"><a href="/notifications.html">🔔 Notifications</a></li>
+                    <li class="sidebar-nav__item"><a href="#" id="logout-btn">🚪 Logout</a></li>
+                </ul>
+            </nav>
+        </aside>
+        <div class="dashboard-content">
+            <section class="profile-header card">
+                <div style="display: flex; align-items: center; gap: var(--spacing-lg);">
+                    <div class="profile-avatar" id="profile-avatar"></div>
+                    <div class="profile-info">
+                        <h1 id="profile-name" style="margin-bottom: var(--spacing-xs);"></h1>
+                        <p id="profile-email" style="color: var(--color-text-secondary); margin-bottom: var(--spacing-xs);"></p>
+                        <p id="profile-phone" style="color: var(--color-text-secondary); margin-bottom: var(--spacing-xs);"></p>
+                        <p style="font-size: 0.9rem; color: var(--color-text-secondary);">Member since: <span id="profile-date"></span></p>
+                    </div>
+                </div>
+                <button class="btn btn--outline" id="edit-profile-btn" style="margin-top: var(--spacing-md);">Edit Profile</button>
+            </section>
+
+            <section id="edit-profile-form" class="card" style="display: none; margin-top: var(--spacing-lg);">
+                <h2>Edit Profile</h2>
+                <form class="form" id="profile-form" style="margin-top: var(--spacing-md);">
+                    <div class="form-group">
+                        <label for="edit-name">Full Name</label>
+                        <input type="text" id="edit-name" class="input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-email">Email Address</label>
+                        <input type="email" id="edit-email" class="input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-phone">Phone Number</label>
+                        <input type="tel" id="edit-phone" class="input" required>
+                    </div>
+                    <div style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+                        <button type="submit" class="btn btn--primary">Save Changes</button>
+                        <button type="button" class="btn btn--outline" id="cancel-edit-btn">Cancel</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </main>
+    <footer id="app-footer"></footer>
+    <script type="module" src="/js/pages/profile.js"></script>
+</body>
+</html>

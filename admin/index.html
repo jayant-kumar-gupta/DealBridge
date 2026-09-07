@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — DealBridge Admin</title>
+    <link rel="icon" href="/assets/images/logo.jpg" type="image/jpeg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="admin-sidebar" id="admin-sidebar"></aside>
+        <main class="admin-main">
+            <header class="admin-header">
+                <h1 class="page-title">Dashboard</h1>
+            </header>
+            <div class="stat-cards" id="dashboard-stats"></div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2xl);">
+                <div class="admin-chart">
+                    <h2 class="section-title" style="margin-bottom: var(--space-md);">Revenue (Last 6 Months)</h2>
+                    <canvas id="revenueChart"></canvas>
+                </div>
+                <div class="admin-chart">
+                    <h2 class="section-title" style="margin-bottom: var(--space-md);">Orders Over Time</h2>
+                    <canvas id="ordersChart"></canvas>
+                </div>
+            </div>
+
+            <div class="admin-table-container">
+                <h2 class="section-title" style="margin-bottom: var(--space-md);">Recent Orders</h2>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-orders-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+    <script type="module" src="/js/pages/admin/dashboard.js"></script>
+</body>
+</html>

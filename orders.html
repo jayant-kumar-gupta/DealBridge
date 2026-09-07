@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders — DealBridge</title>
+    <meta name="description" content="View your DealBridge order history.">
+    <link rel="icon" href="/assets/images/logo.jpg" type="image/jpeg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+    <header id="app-header"></header>
+    <main class="sidebar-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li class="sidebar-nav__item"><a href="/profile.html">👤 Profile</a></li>
+                    <li class="sidebar-nav__item"><a href="/orders.html" class="active">📦 Orders</a></li>
+                    <li class="sidebar-nav__item"><a href="/wishlist.html">❤️ Wishlist</a></li>
+                    <li class="sidebar-nav__item"><a href="/addresses.html">📍 Addresses</a></li>
+                    <li class="sidebar-nav__item"><a href="/promo-codes.html">🎟️ Promo Codes</a></li>
+                    <li class="sidebar-nav__item"><a href="/notifications.html">🔔 Notifications</a></li>
+                    <li class="sidebar-nav__item"><a href="#" id="logout-btn">🚪 Logout</a></li>
+                </ul>
+            </nav>
+        </aside>
+        <div class="dashboard-content">
+            <h1 style="margin-bottom: var(--spacing-lg);">My Orders</h1>
+            
+            <div class="tabs" style="margin-bottom: var(--spacing-lg);">
+                <button class="tab-btn active" data-tab="all">All Orders</button>
+                <button class="tab-btn" data-tab="active">Active</button>
+                <button class="tab-btn" data-tab="delivered">Delivered</button>
+                <button class="tab-btn" data-tab="cancelled">Cancelled</button>
+            </div>
+
+            <div id="orders-list" style="display: flex; flex-direction: column; gap: var(--spacing-md);">
+                <!-- Orders will be rendered here -->
+            </div>
+            
+            <div id="empty-state" class="empty-state" style="display: none; text-align: center; padding: var(--spacing-2xl) 0;">
+                <div style="font-size: 3rem; margin-bottom: var(--spacing-md);">📦</div>
+                <h3>No orders found</h3>
+                <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-lg);">You haven't placed any orders in this category.</p>
+                <a href="/" class="btn btn--primary">Start Shopping</a>
+            </div>
+        </div>
+    </main>
+    <footer id="app-footer"></footer>
+    <script type="module" src="/js/pages/orders-page.js"></script>
+</body>
+</html>

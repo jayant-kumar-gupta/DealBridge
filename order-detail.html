@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Detail — DealBridge</title>
+    <meta name="description" content="View details for your order.">
+    <link rel="icon" href="/assets/images/logo.jpg" type="image/jpeg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <style>
+        .timeline { list-style: none; padding: 0; margin: var(--spacing-lg) 0; position: relative; }
+        .timeline::before { content: ''; position: absolute; left: 15px; top: 0; bottom: 0; width: 2px; background: var(--color-border); }
+        .timeline-step { display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-md); position: relative; }
+        .timeline-indicator { width: 32px; height: 32px; border-radius: 50%; background: var(--color-bg); border: 2px solid var(--color-border); display: flex; align-items: center; justify-content: center; z-index: 1; font-size: 14px; }
+        .timeline-step.completed .timeline-indicator { background: var(--color-success); border-color: var(--color-success); color: white; }
+        .timeline-step.completed .timeline-indicator::after { content: '✓'; }
+        .timeline-content { flex: 1; padding-top: 4px; }
+        .timeline-title { font-weight: 600; margin-bottom: 4px; }
+        .timeline-date { font-size: 0.9rem; color: var(--color-text-secondary); }
+        .promo-box { background: var(--color-primary-light); border: 1px dashed var(--color-primary); padding: var(--spacing-md); border-radius: var(--radius-md); text-align: center; margin: var(--spacing-md) 0; }
+        .promo-code-text { font-family: monospace; font-size: 1.5rem; font-weight: 700; color: var(--color-primary-dark); letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+    <header id="app-header"></header>
+    <main class="sidebar-layout">
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <ul style="list-style: none; padding: 0; margin: 0;">
+                    <li class="sidebar-nav__item"><a href="/profile.html">👤 Profile</a></li>
+                    <li class="sidebar-nav__item"><a href="/orders.html" class="active">📦 Orders</a></li>
+                    <li class="sidebar-nav__item"><a href="/wishlist.html">❤️ Wishlist</a></li>
+                    <li class="sidebar-nav__item"><a href="/addresses.html">📍 Addresses</a></li>
+                    <li class="sidebar-nav__item"><a href="/promo-codes.html">🎟️ Promo Codes</a></li>
+                    <li class="sidebar-nav__item"><a href="/notifications.html">🔔 Notifications</a></li>
+                    <li class="sidebar-nav__item"><a href="#" id="logout-btn">🚪 Logout</a></li>
+                </ul>
+            </nav>
+        </aside>
+        <div class="dashboard-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
+                <h1>Order Details</h1>
+                <a href="/orders.html" class="link">← Back to Orders</a>
+            </div>
+            
+            <div id="order-container">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </main>
+    <footer id="app-footer"></footer>
+    <script type="module" src="/js/pages/order-detail.js"></script>
+</body>
+</html>

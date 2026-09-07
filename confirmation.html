@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmed — DealBridge</title>
+    <meta name="description" content="Your order has been placed successfully.">
+    <link rel="icon" href="/assets/images/logo.jpg" type="image/jpeg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <style>
+        .success-icon { font-size: 5rem; color: var(--color-success); animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes scaleIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        .promo-code-box { border: 2px dashed var(--color-primary); background: var(--color-primary-light); border-radius: var(--radius-md); padding: var(--space-lg); text-align: center; margin: var(--space-xl) 0; }
+        .promo-code-text { font-family: monospace; font-size: 2rem; font-weight: 700; color: var(--color-primary-dark); letter-spacing: 2px; margin-bottom: var(--space-md); }
+        
+        .process-steps { display: flex; flex-direction: column; gap: var(--space-md); position: relative; padding-left: 30px; margin-top: var(--space-lg); }
+        .process-steps::before { content: ''; position: absolute; left: 11px; top: 10px; bottom: 10px; width: 2px; background: var(--color-border); }
+        .process-step { position: relative; }
+        .process-step::before { content: ''; position: absolute; left: -26px; top: 4px; width: 14px; height: 14px; border-radius: 50%; background: var(--color-bg); border: 3px solid var(--color-primary); z-index: 2; }
+    </style>
+</head>
+<body>
+    <header id="app-header"></header>
+    <main>
+        <div class="container py-2xl">
+            <div class="grid grid-cols-12 gap-xl">
+                <div class="col-span-12 lg:col-span-8 lg:col-start-3">
+                    
+                    <div class="text-center mb-xl">
+                        <div class="success-icon mb-md">✓</div>
+                        <h1 class="page-title">Order Placed Successfully!</h1>
+                        <p class="text-secondary text-lg mt-sm">Thank you for shopping with DealBridge.</p>
+                    </div>
+
+                    <div class="card p-xl mb-xl">
+                        <h2 class="h4 mb-md border-bottom pb-sm">Order Details</h2>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-md mb-lg">
+                            <div>
+                                <span class="text-sm text-secondary block">Order ID</span>
+                                <strong id="conf-order-id">---</strong>
+                            </div>
+                            <div>
+                                <span class="text-sm text-secondary block">Date</span>
+                                <strong id="conf-date">---</strong>
+                            </div>
+                            <div>
+                                <span class="text-sm text-secondary block">Payment</span>
+                                <strong>Paid Online</strong>
+                            </div>
+                            <div>
+                                <span class="text-sm text-secondary block">Amount</span>
+                                <strong id="conf-amount">---</strong>
+                            </div>
+                        </div>
+
+                        <h3 class="h5 mb-sm">Items Ordered</h3>
+                        <div id="conf-items-list" class="mb-lg">
+                            <!-- Items injected via JS -->
+                        </div>
+
+                        <div class="promo-code-box">
+                            <h3 class="h5 mb-sm">Your Redemption Code</h3>
+                            <p class="text-sm text-secondary mb-md">Use this code on the partner website to redeem your product for free (you already paid us).</p>
+                            <div class="promo-code-text" id="conf-promo-code">LOADING...</div>
+                            <button id="btn-copy-code" class="btn btn-primary">Copy Code</button>
+                        </div>
+
+                        <h3 class="h5 mb-sm">What happens next?</h3>
+                        <div class="process-steps">
+                            <div class="process-step">
+                                <strong>Payment Successful</strong>
+                                <p class="text-sm text-secondary m-0">Your payment has been securely processed by DealBridge.</p>
+                            </div>
+                            <div class="process-step">
+                                <strong>Promo Code Generated</strong>
+                                <p class="text-sm text-secondary m-0">We secured your items and generated a unique 100% off code.</p>
+                            </div>
+                            <div class="process-step">
+                                <strong>Redeem with Partner</strong>
+                                <p class="text-sm text-secondary m-0">Go to the partner website (e.g. Amazon, MegaMart), add the same items, and use your code at checkout.</p>
+                            </div>
+                            <div class="process-step">
+                                <strong>Partner Delivers Product</strong>
+                                <p class="text-sm text-secondary m-0">The partner will deliver the product directly to your door.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-md justify-center mt-xl">
+                        <a href="/orders.html" class="btn btn-secondary btn-lg">View Order Details</a>
+                        <a href="/" class="btn btn-primary btn-lg">Continue Shopping</a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer id="app-footer"></footer>
+    <script type="module" src="/js/pages/confirmation.js"></script>
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout — DealBridge</title>
+    <meta name="description" content="Complete your purchase on DealBridge.">
+    <link rel="icon" href="/assets/images/logo.jpg" type="image/jpeg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <style>
+        .step-indicator { display: flex; justify-content: space-between; position: relative; margin-bottom: var(--space-2xl); }
+        .step-indicator::before { content: ''; position: absolute; top: 15px; left: 0; right: 0; height: 2px; background: var(--color-border); z-index: 1; }
+        .step { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; background: var(--color-bg); padding: 0 10px; }
+        .step-circle { width: 32px; height: 32px; border-radius: 50%; background: var(--color-border); color: var(--color-text-secondary); display: flex; align-items: center; justify-content: center; font-weight: 600; margin-bottom: 8px; transition: all 0.3s; }
+        .step.active .step-circle { background: var(--color-primary); color: white; }
+        .step.completed .step-circle { background: var(--color-success); color: white; }
+        .step-label { font-size: 0.85rem; font-weight: 500; color: var(--color-text-secondary); }
+        .step.active .step-label { color: var(--color-primary); }
+        
+        .checkout-section { display: none; }
+        .checkout-section.active { display: block; animation: fadeIn 0.4s ease; }
+        
+        .address-card { border: 2px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); cursor: pointer; transition: all 0.2s; position: relative; }
+        .address-card:hover { border-color: var(--color-primary-light); }
+        .address-card input[type="radio"] { position: absolute; opacity: 0; }
+        .address-card.selected { border-color: var(--color-primary); background-color: var(--color-primary-light); }
+        
+        .payment-method-card { border: 2px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); cursor: pointer; margin-bottom: var(--space-sm); display: flex; align-items: center; gap: var(--space-md); }
+        .payment-method-card:hover { border-color: var(--color-primary-light); }
+        .payment-method-card input[type="radio"] { margin: 0; }
+        .payment-method-card.selected { border-color: var(--color-primary); background-color: var(--color-primary-light); }
+        .payment-details { display: none; margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border); width: 100%; }
+        .payment-method-card.selected .payment-details { display: block; }
+    </style>
+</head>
+<body>
+    <header id="app-header"></header>
+    <main>
+        <div class="container py-xl">
+            <div class="step-indicator">
+                <div class="step active" id="indicator-1">
+                    <div class="step-circle">1</div>
+                    <span class="step-label">Address</span>
+                </div>
+                <div class="step" id="indicator-2">
+                    <div class="step-circle">2</div>
+                    <span class="step-label">Summary</span>
+                </div>
+                <div class="step" id="indicator-3">
+                    <div class="step-circle">3</div>
+                    <span class="step-label">Promo</span>
+                </div>
+                <div class="step" id="indicator-4">
+                    <div class="step-circle">4</div>
+                    <span class="step-label">Payment</span>
+                </div>
+                <div class="step" id="indicator-5">
+                    <div class="step-circle">5</div>
+                    <span class="step-label">Done</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-xl">
+                <!-- Main Checkout Area -->
+                <div class="col-span-12 lg:col-span-8">
+                    
+                    <!-- Step 1: Address -->
+                    <section id="step-1" class="checkout-section active card p-xl">
+                        <h2 class="h3 mb-lg">Select Delivery Address</h2>
+                        <div id="address-list" class="grid grid-cols-1 md:grid-cols-2 gap-md mb-lg">
+                            <!-- Addresses injected via JS -->
+                        </div>
+                        <button id="btn-add-address" class="btn btn-secondary mb-xl">+ Add New Address</button>
+                        <div class="flex justify-end">
+                            <button id="btn-continue-1" class="btn btn-primary btn-lg">Continue to Summary</button>
+                        </div>
+                    </section>
+
+                    <!-- Step 2: Order Summary -->
+                    <section id="step-2" class="checkout-section card p-xl">
+                        <h2 class="h3 mb-lg">Order Summary</h2>
+                        <div id="checkout-items-list" class="mb-xl">
+                            <!-- Items injected via JS -->
+                        </div>
+                        <div class="flex justify-between align-center">
+                            <button class="btn btn-ghost btn-back" data-target="1">Back</button>
+                            <button id="btn-continue-2" class="btn btn-primary btn-lg">Continue to Promo Code</button>
+                        </div>
+                    </section>
+
+                    <!-- Step 3: Promo Code -->
+                    <section id="step-3" class="checkout-section card p-xl">
+                        <h2 class="h3 mb-lg">Apply Promo Code</h2>
+                        <div class="flex gap-sm mb-xl">
+                            <input type="text" id="promo-input" class="form-control" placeholder="Enter code here" style="flex: 1;">
+                            <button id="btn-apply-promo" class="btn btn-secondary">Apply</button>
+                        </div>
+                        <h3 class="h5 mb-md">Available Promo Codes</h3>
+                        <div id="available-promos" class="mb-xl">
+                            <!-- Promos injected via JS -->
+                        </div>
+                        <div class="flex justify-between align-center">
+                            <button class="btn btn-ghost btn-back" data-target="2">Back</button>
+                            <button id="btn-continue-3" class="btn btn-primary btn-lg">Continue to Payment</button>
+                        </div>
+                    </section>
+
+                    <!-- Step 4: Payment -->
+                    <section id="step-4" class="checkout-section card p-xl">
+                        <h2 class="h3 mb-lg">Select Payment Method</h2>
+                        <div class="payment-methods mb-xl">
+                            
+                            <label class="payment-method-card flex-wrap">
+                                <input type="radio" name="payment" value="card" checked>
+                                <span class="h5 m-0" style="flex: 1;">Credit / Debit Card</span>
+                                <div class="payment-details">
+                                    <div class="form-group mb-sm">
+                                        <label class="form-label">Card Number</label>
+                                        <input type="text" class="form-control" placeholder="0000 0000 0000 0000">
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-sm mb-sm">
+                                        <div class="form-group">
+                                            <label class="form-label">Expiry (MM/YY)</label>
+                                            <input type="text" class="form-control" placeholder="MM/YY">
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">CVV</label>
+                                            <input type="password" class="form-control" placeholder="123">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Name on Card</label>
+                                        <input type="text" class="form-control" placeholder="John Doe">
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label class="payment-method-card flex-wrap">
+                                <input type="radio" name="payment" value="upi">
+                                <span class="h5 m-0" style="flex: 1;">UPI</span>
+                                <div class="payment-details">
+                                    <div class="form-group">
+                                        <label class="form-label">Enter UPI ID</label>
+                                        <input type="text" class="form-control" placeholder="username@upi">
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label class="payment-method-card flex-wrap">
+                                <input type="radio" name="payment" value="netbanking">
+                                <span class="h5 m-0" style="flex: 1;">Net Banking</span>
+                                <div class="payment-details">
+                                    <div class="form-group">
+                                        <label class="form-label">Select Bank</label>
+                                        <select class="form-control">
+                                            <option>State Bank of India</option>
+                                            <option>HDFC Bank</option>
+                                            <option>ICICI Bank</option>
+                                            <option>Axis Bank</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="flex justify-between align-center">
+                            <button class="btn btn-ghost btn-back" data-target="3">Back</button>
+                            <button id="btn-pay" class="btn btn-primary btn-lg">Pay Now</button>
+                        </div>
+                    </section>
+
+                </div>
+
+                <!-- Sidebar Summary -->
+                <div class="col-span-12 lg:col-span-4">
+                    <div class="order-summary card p-lg sticky" style="top: 100px;">
+                        <h3 class="mb-md border-bottom pb-sm">Checkout Summary</h3>
+                        <div class="summary-row flex justify-between mb-sm">
+                            <span class="text-secondary" id="summary-items-count">Items (0)</span>
+                            <span id="summary-subtotal">₹0</span>
+                        </div>
+                        <div class="summary-row flex justify-between mb-sm" style="color: var(--color-deal);">
+                            <span>Product Savings</span>
+                            <span id="summary-savings">-₹0</span>
+                        </div>
+                        <div id="promo-discount-row" class="summary-row flex justify-between mb-sm" style="color: var(--color-success); display: none;">
+                            <span>Promo Discount</span>
+                            <span id="summary-promo-discount">-₹0</span>
+                        </div>
+                        <div class="summary-row flex justify-between mt-md pt-md border-top font-bold h4">
+                            <span>Total to Pay</span>
+                            <span id="summary-total">₹0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer id="app-footer"></footer>
+    <script type="module" src="/js/pages/checkout.js"></script>
+</body>
+</html>

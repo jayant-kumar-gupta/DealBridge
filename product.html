@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details — DealBridge</title>
+    <meta name="description" content="Product details and price comparison.">
+    <link rel="icon" href="/assets/images/logo.jpg" type="image/jpeg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/layout.css">
+    <link rel="stylesheet" href="/css/pages.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <style>
+        .product-layout { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-3xl); margin-top: var(--spacing-xl); margin-bottom: var(--spacing-3xl); }
+        @media (max-width: 768px) { .product-layout { grid-template-columns: 1fr; gap: var(--spacing-xl); } }
+        
+        .gallery-main { border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: var(--spacing-md); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: #fff; }
+        .gallery-main img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .gallery-thumbnails { display: flex; gap: var(--spacing-sm); overflow-x: auto; padding-bottom: var(--spacing-xs); }
+        .thumbnail { width: 80px; height: 80px; border: 2px solid transparent; border-radius: var(--radius-sm); cursor: pointer; overflow: hidden; background: #fff; }
+        .thumbnail.active { border-color: var(--color-primary); }
+        .thumbnail img { width: 100%; height: 100%; object-fit: contain; }
+        
+        .product-brand { color: var(--color-text-secondary); font-weight: 500; margin-bottom: var(--spacing-xs); display: block; }
+        .product-title { margin-top: 0; margin-bottom: var(--spacing-sm); font-size: 2rem; }
+        .product-rating { display: flex; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-lg); }
+        .availability { display: inline-block; padding: 4px 8px; border-radius: var(--radius-sm); font-size: 0.85rem; font-weight: 600; background: var(--color-success); color: white; margin-left: var(--spacing-sm); }
+        .availability.low_stock { background: var(--color-warning); color: #333; }
+        .availability.out-of-stock { background: var(--color-error); }
+        
+        .price-section { background: var(--color-surface); padding: var(--spacing-lg); border-radius: var(--radius-lg); border: 1px solid var(--color-border); margin-bottom: var(--spacing-xl); }
+        .price-current { font-size: 2.5rem; font-weight: 700; color: var(--color-text); margin-right: var(--spacing-sm); }
+        .price-original { text-decoration: line-through; color: var(--color-text-secondary); font-size: 1.2rem; }
+        .price-badge { background: var(--color-error); color: white; padding: 4px 8px; border-radius: var(--radius-sm); font-weight: 600; font-size: 0.9rem; margin-left: var(--spacing-sm); vertical-align: top; }
+        .price-savings { color: var(--color-deal); font-weight: 600; margin-top: var(--spacing-sm); }
+        
+        .actions-group { display: flex; gap: var(--spacing-md); margin-bottom: var(--spacing-xl); flex-wrap: wrap; }
+        .quantity-selector { display: flex; align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; }
+        .qty-btn { background: var(--color-surface); border: none; width: 40px; height: 48px; font-size: 1.2rem; cursor: pointer; }
+        .qty-btn:hover { background: var(--color-bg); }
+        .qty-input { width: 50px; height: 48px; border: none; border-left: 1px solid var(--color-border); border-right: 1px solid var(--color-border); text-align: center; font-weight: 600; }
+        
+        .action-btns { display: flex; gap: var(--spacing-sm); flex: 1; }
+        .btn-wishlist { width: 48px; height: 48px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .btn-wishlist.active { color: var(--color-error); border-color: var(--color-error); }
+        
+        .specs-list { display: grid; grid-template-columns: auto 1fr; gap: var(--spacing-sm) var(--spacing-lg); margin-bottom: var(--spacing-xl); }
+        .specs-label { font-weight: 600; color: var(--color-text-secondary); }
+        
+        .section-header { margin-top: var(--spacing-3xl); margin-bottom: var(--spacing-lg); border-bottom: 2px solid var(--color-border); padding-bottom: var(--spacing-sm); }
+        
+        .comparison-table { width: 100%; border-collapse: collapse; }
+        .comparison-table th, .comparison-table td { padding: var(--spacing-md); text-align: left; border-bottom: 1px solid var(--color-border); }
+        .comparison-table th { background: var(--color-bg); font-weight: 600; }
+        .comparison-table tr.best-deal { background: rgba(42, 157, 78, 0.05); border-left: 4px solid var(--color-deal); }
+        
+        .price-chart-container { background: var(--color-surface); padding: var(--spacing-lg); border-radius: var(--radius-lg); border: 1px solid var(--color-border); }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); }
+        .chart-toggles button { background: none; border: 1px solid var(--color-border); padding: 4px 12px; border-radius: 16px; cursor: pointer; margin-left: var(--spacing-xs); }
+        .chart-toggles button.active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+        .chart-stats { display: flex; gap: var(--spacing-xl); margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--color-border); }
+        .stat-item { flex: 1; }
+        .stat-label { font-size: 0.85rem; color: var(--color-text-secondary); display: block; margin-bottom: 4px; }
+        .stat-value { font-weight: 600; font-size: 1.2rem; }
+        
+        .similar-products { display: flex; gap: var(--spacing-lg); overflow-x: auto; padding-bottom: var(--spacing-lg); scroll-snap-type: x mandatory; }
+        .similar-products .product-card { flex: 0 0 280px; scroll-snap-align: start; }
+    </style>
+</head>
+<body>
+    <header id="app-header"></header>
+    
+    <main class="container">
+        <nav class="breadcrumb" style="margin-top: var(--spacing-md); color: var(--color-text-secondary); font-size: 0.9rem;">
+            <a href="/" class="text-link">Home</a> &gt; 
+            <a href="#" id="breadcrumb-cat" class="text-link">Category</a> &gt; 
+            <span id="breadcrumb-name">Product Name</span>
+        </nav>
+        
+        <div id="product-error" style="display: none; padding: var(--spacing-3xl) 0; text-align: center;">
+            <h2>Product Not Found</h2>
+            <p>The product you are looking for does not exist or has been removed.</p>
+            <a href="/" class="btn btn-primary" style="margin-top: var(--spacing-md);">Return to Home</a>
+        </div>
+        
+        <div id="product-content">
+            <div class="product-layout">
+                <!-- Left: Gallery -->
+                <div class="product-gallery">
+                    <div class="gallery-main">
+                        <img id="main-image" src="/assets/images/logo.jpg" alt="Product">
+                    </div>
+                    <div class="gallery-thumbnails" id="thumbnail-container">
+                        <!-- Thumbnails injected here -->
+                    </div>
+                </div>
+                
+                <!-- Right: Info -->
+                <div class="product-info">
+                    <span class="product-brand" id="prod-brand">Brand</span>
+                    <h1 class="product-title" id="prod-name">Product Name</h1>
+                    
+                    <div class="product-rating">
+                        <span class="stars" id="prod-stars">★★★★★</span>
+                        <span id="prod-rating-val">5.0</span>
+                        <a href="#reviews" class="text-link" style="margin-left: var(--spacing-xs);">(<span id="prod-reviews">0</span> reviews)</a>
+                        <span class="availability" id="prod-availability">In Stock</span>
+                    </div>
+                    
+                    <p id="prod-desc" style="color: var(--color-text-secondary); margin-bottom: var(--spacing-xl); line-height: 1.6;"></p>
+                    
+                    <div class="price-section">
+                        <div style="margin-bottom: var(--spacing-xs);">
+                            <span class="price-current" id="prod-price">₹0</span>
+                            <span class="price-original" id="prod-original">₹0</span>
+                            <span class="price-badge" id="prod-discount">0% OFF</span>
+                        </div>
+                        <div class="price-savings" id="prod-savings">You save ₹0 by choosing DealBridge</div>
+                    </div>
+                    
+                    <div class="actions-group">
+                        <div class="quantity-selector">
+                            <button type="button" class="qty-btn" id="qty-minus">-</button>
+                            <input type="number" class="qty-input" id="qty-input" value="1" min="1" max="10">
+                            <button type="button" class="qty-btn" id="qty-plus">+</button>
+                        </div>
+                        <div class="action-btns">
+                            <button class="btn btn-primary" id="btn-add-cart" style="flex: 1; padding: 0 var(--spacing-xl);">🛒 Add to Cart</button>
+                            <button class="btn btn-accent" id="btn-buy-now" style="flex: 1; padding: 0 var(--spacing-xl);">⚡ Buy Now</button>
+                            <button class="btn-wishlist" id="btn-wishlist" aria-label="Add to wishlist">🤍</button>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: var(--spacing-xl);">
+                        <h3 style="margin-bottom: var(--spacing-md);">Key Specifications</h3>
+                        <div class="specs-list" id="prod-specs">
+                            <!-- Specs injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h2 class="section-header">Partner Price Comparison</h2>
+            <div style="overflow-x: auto; margin-bottom: var(--spacing-3xl);">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Partner</th>
+                            <th>Their Price</th>
+                            <th>Our Price</th>
+                            <th>Your Savings</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparison-tbody">
+                        <!-- Rows injected here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <h2 class="section-header">Price History</h2>
+            <div class="price-chart-container" style="margin-bottom: var(--spacing-3xl);">
+                <div class="chart-header">
+                    <h3 style="margin: 0;">Price Trend</h3>
+                    <div class="chart-toggles">
+                        <button class="active">All Time</button>
+                    </div>
+                </div>
+                <canvas id="priceChart" style="width: 100%; height: 300px;"></canvas>
+                <div class="chart-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Current Price</span>
+                        <span class="stat-value" id="stat-current" style="color: var(--color-primary);">₹0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Highest Price</span>
+                        <span class="stat-value" id="stat-high">₹0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Lowest Price</span>
+                        <span class="stat-value" id="stat-low" style="color: var(--color-deal);">₹0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <h2 class="section-header">Similar Products</h2>
+            <div class="similar-products" id="similar-products-container" style="margin-bottom: var(--spacing-3xl);">
+                <!-- Product cards injected here -->
+            </div>
+        </div>
+    </main>
+    
+    <footer id="app-footer"></footer>
+    <script type="module" src="/js/pages/product.js"></script>
+</body>
+</html>
