@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, HTTPException, Response, Query
 from typing import Annotated, List
 from app.models.database import Category
-from app.core.database import create_db_and_tables, SessionDep
+from app.core.database import SessionDep
 from sqlmodel import select
 from app.schemas.category import CategoryCreate, CategoryRead
 

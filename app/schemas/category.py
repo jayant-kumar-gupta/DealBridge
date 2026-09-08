@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 class CategoryBase(BaseModel):
     name: str
@@ -12,4 +12,8 @@ class CategoryCreate(CategoryBase):
 
 # Data returned when Reading (includes the database-generated id)
 class CategoryRead(CategoryBase):
+    id: int
+
+class UserLogin(BaseModel):
+    email: EmailStr
     id: int
