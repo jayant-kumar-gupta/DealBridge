@@ -11,7 +11,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 SECRECT_KEY = "skdlfu9347589jfodf78df!@*&H(7h98f789we7rwjodfnd8)&895j9854"
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRATION = 30
+ACCESS_TOKEN_EXPIRATION = 1
 
 def hash(password: str):
     hashed = PasswordHash.recommended().hash(password)
@@ -30,16 +30,16 @@ def create_access_token(data: dict):
 
 def verify_access_token(token: str, credential_exception):
     try:
-        payload = jwt.decode(token, SECRECT_KEY, algorithms=ALGORITHM)
+        payload = jwt.decode(token, SECRECT_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
 
-        if id is None:
+        if user_id is None:
             raise credential_exception
         
-        token_data = Token(user_id=payload.get("user_id"))
+        token_data = Token(user_id=user_id)
+        return token_data
     except:
         raise credential_exception
-
-    return token_data
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
     credential_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credential not validated.", headers={"WWW-Authenticate": "Bearer"})

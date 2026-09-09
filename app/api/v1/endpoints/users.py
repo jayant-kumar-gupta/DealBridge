@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select
 from app.schemas.users import UserRegister, UserLoginResponse
 from app.core.database import SessionDep
@@ -9,7 +9,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 router = APIRouter(prefix="/login", tags=["Login & Authentication"])
 
 @router.post("/", response_model=UserLoginResponse)
-def user_login(user_credentials: OAuth2PasswordRequestForm, session: SessionDep):
+def user_login(session: SessionDep,
+               user_credentials: OAuth2PasswordRequestForm = Depends(),
+            ):
     statement = select(Users).where(Users.email == user_credentials.username)
     database_user = session.exec(statement).first()
 
