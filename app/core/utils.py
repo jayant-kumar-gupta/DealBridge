@@ -5,13 +5,13 @@ from datetime import datetime, timedelta, timezone
 from app.schemas.users import Token
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from app.core.config import settings
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login/")
 
-
-SECRECT_KEY = "skdlfu9347589jfodf78df!@*&H(7h98f789we7rwjodfnd8)&895j9854"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRATION = 1
+SECRET_KEY = settings.SECRET_KEY
+ACCESS_TOKEN_EXPIRATION = settings.ACCESS_TOKEN_EXPIRATION
+ALGORITHM = settings.ALGORITHM
 
 def hash(password: str):
     hashed = PasswordHash.recommended().hash(password)
@@ -25,20 +25,21 @@ def create_access_token(data: dict):
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRATION)
 
     to_encode.update({"exp": expire})
-    token = jwt.encode(to_encode, SECRECT_KEY, algorithm=ALGORITHM)
+    token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return token
 
 def verify_access_token(token: str, credential_exception):
     try:
-        payload = jwt.decode(token, SECRECT_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
+        role = payload.get("role")
 
         if user_id is None:
             raise credential_exception
         
-        token_data = Token(user_id=user_id)
+        token_data = Token(user_id=user_id, role=role)
         return token_data
-    except:
+    except InvalidTokenError:
         raise credential_exception
 
 def get_current_user(token: str = Depends(oauth2_scheme)):

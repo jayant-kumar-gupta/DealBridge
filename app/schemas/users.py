@@ -3,7 +3,8 @@ from typing import Optional
 
 
 class UserLoginResponse(BaseModel):
-    jwt_token: str
+    access_token: str
+    token_type: str = "bearer"
 
 class UserRegister(BaseModel):
     email: EmailStr
@@ -12,4 +13,9 @@ class UserRegister(BaseModel):
     lastname: str | None = None
 
 class Token(BaseModel):
-    user_id: Optional[str] = None
+    user_id: int
+    role: str
+
+class AdminRegister(BaseModel):
+    email: EmailStr
+    password: str

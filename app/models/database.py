@@ -15,3 +15,9 @@ class Users(SQLModel, table = True):
     password: str
     firstname: str | None = Field(default = None)
     lastname: str | None = Field(default = None)
+
+
+class Admins(SQLModel, table = True):
+    id: int | None = Field(default=None, primary_key=True)
+    email: str = Field(unique=True)
+    password: str

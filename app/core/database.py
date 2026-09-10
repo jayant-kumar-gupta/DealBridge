@@ -1,8 +1,12 @@
 from sqlmodel import create_engine, SQLModel, Session
 from typing import Annotated
 from fastapi import Depends
+from dotenv import load_dotenv
+import os
 
-DATABASE_URL = "postgresql://jayant:Gentleman_123@localhost:5432/dealbridge_db"
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 
 def create_db_and_tables():
