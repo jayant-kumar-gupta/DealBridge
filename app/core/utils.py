@@ -6,12 +6,16 @@ from app.schemas.users import Token
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.core.config import settings
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login/")
 
-SECRET_KEY = settings.SECRET_KEY
-ACCESS_TOKEN_EXPIRATION = settings.ACCESS_TOKEN_EXPIRATION
-ALGORITHM = settings.ALGORITHM
+SECRET_KEY = os.getenv("SECRET_KEY")
+ACCESS_TOKEN_EXPIRATION = 30
+ALGORITHM = "HS256"
 
 def hash(password: str):
     hashed = PasswordHash.recommended().hash(password)
