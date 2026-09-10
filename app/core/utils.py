@@ -5,7 +5,6 @@ from datetime import datetime, timedelta, timezone
 from app.schemas.users import Token
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from app.core.config import settings
 import os
 from dotenv import load_dotenv
 
