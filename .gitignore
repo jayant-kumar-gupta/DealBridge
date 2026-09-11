@@ -40,3 +40,7 @@ Thumbs.db
 
 # AI things
 .agents
+
+# Postman tools
+.postman
+postman

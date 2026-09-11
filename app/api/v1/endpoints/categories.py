@@ -29,7 +29,7 @@ def get_categories(
     statement = select(Category)
 
     if name:
-        statement = statement.where(Category.name.ilike(f"%{name}%"))
+        statement = statement.where(name.lower() in Category.name.lower())
     categories = session.exec(statement.offset(offset).limit(limit)).all()
     return list(categories)
 
