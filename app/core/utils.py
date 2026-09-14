@@ -3,6 +3,8 @@ import jwt
 from jwt.exceptions import InvalidTokenError
 from datetime import datetime, timedelta, timezone
 from app.schemas.users import Token
+from app.models.database import Users
+from app.core.database import SessionDep
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 import os
@@ -45,7 +47,13 @@ def verify_access_token(token: str, credential_exception):
     except InvalidTokenError:
         raise credential_exception
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(session: SessionDep, token: str = Depends(oauth2_scheme)) -> Users:
     credential_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credential not validated.", headers={"WWW-Authenticate": "Bearer"})
 
-    return verify_access_token(token, credential_exception)
+    token_data = verify_access_token(token, credential_exception)
+
+    user = session.get(Users, token_data.user_id)
+    if user is None:
+        raise credential_exception
+
+    return user
