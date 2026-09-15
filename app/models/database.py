@@ -56,8 +56,8 @@ class Cart(SQLModel, table = True):
     partner_id: int = Field(foreign_key="partner.id", ondelete="CASCADE")
     brand: str | None = Field(default=None)
 
-    products: "Product" | None = Relationship()
-    partner: "Partner" | None = Relationship()
+    products: "Product" = Relationship()
+    partner: "Partner" = Relationship()
 
 class PartnerPrice(SQLModel, table = True):
     product_id: int | None = Field(default = None, foreign_key="product.id", ondelete="CASCADE", primary_key=True)
