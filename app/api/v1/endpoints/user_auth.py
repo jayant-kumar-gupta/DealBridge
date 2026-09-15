@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select
 from app.schemas.users import UserRegister, UserLoginResponse, AdminRegister, Token
 from app.core.database import SessionDep
-from app.models.database import Users
+from app.models.database import User
 from app.core.utils import hash, verify, create_access_token, get_current_user
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -19,7 +19,7 @@ def require_admin(current_user: Token = Depends(get_current_user)):
 def user_login(session: SessionDep,
                user_credentials: OAuth2PasswordRequestForm = Depends(),
             ):
-    statement = select(Users).where((Users.email == user_credentials.username) | (Users.phone == user_credentials.username))
+    statement = select(User).where((User.email == user_credentials.username) | (User.phone == user_credentials.username))
     database_user = session.exec(statement).first()
 
     if not database_user or not verify(user_credentials.password, database_user.password):
@@ -35,13 +35,13 @@ def user_login(session: SessionDep,
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def create_user(user_credentials: UserRegister, session: SessionDep):
     # 1. Quick Database check first
-    statement = select(Users).where(Users.phone == user_credentials.phone)
+    statement = select(User).where(User.phone == user_credentials.phone)
     existing_user = session.exec(statement).first()
     if existing_user:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phone No. is already registered")
 
     # 2. Only hash if email is unique
-    user = Users(
+    user = User(
             phone=user_credentials.phone,
             email=user_credentials.email,
             password=hash(user_credentials.password),
@@ -57,13 +57,13 @@ def create_user(user_credentials: UserRegister, session: SessionDep):
 
 @router.post("/register-admin", status_code=status.HTTP_201_CREATED)
 def create_admin(session: SessionDep, admin_credentials: AdminRegister, current_admin: Token = Depends(require_admin)):
-    statement = select(Users).where(Users.phone == admin_credentials.phone)
+    statement = select(User).where(User.phone == admin_credentials.phone)
     existing_admin = session.exec(statement).first()
 
     if existing_admin:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Phone No. is already registered")
 
-    admin = Users(
+    admin = User(
         phone = admin_credentials.phone,
         email=admin_credentials.email,
         password = hash(admin_credentials.password),
