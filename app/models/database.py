@@ -23,7 +23,7 @@ class User(SQLModel, table = True):
     firstname: str | None = Field(default = None)
     lastname: str | None = Field(default = None)
     is_admin: bool = Field(default=False, sa_column_kwargs={"server_default": text("false")})
-    join_date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+    join_date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
 
 class Rating(SQLModel, table = True): # One User is allowed to rate only one time
     product_id: int | None = Field(default=None, foreign_key="product.id", ondelete="CASCADE", primary_key=True)
@@ -35,7 +35,7 @@ class ProductComment(SQLModel, table = True): # A User is allowed to comment mul
     product_id: int | None = Field(default=None, foreign_key="product.id", ondelete="CASCADE")
     user_id: int | None = Field(default=None, foreign_key="user.id", ondelete="CASCADE")
     comment: str | None = Field(default=None)
-    date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+    date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
 
 class Notification(SQLModel, table = True):
     id: int | None = Field(default=None, primary_key=True)
@@ -44,7 +44,7 @@ class Notification(SQLModel, table = True):
     title: str | None = Field(default=None)
     message: str | None = Field(default=None)
     icon: str | None = Field(default=None)
-    date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+    date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
     link: str | None = Field(default=None)
     read: bool | None = Field(default=False, sa_column_kwargs={"server_default": text("false")})
 
@@ -66,7 +66,7 @@ class PartnerPrice(SQLModel, table = True):
     stock_count: int | None = Field(default=0, sa_column_kwargs={"server_default": "0"}) # to help with the stocks (to find out whether the product is in stock or not (for one partner))
     in_stock: bool = Field(default=True)
     partner_product_url: str | None = Field(default=None)
-    date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc))
+    date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
 
     cart: Cart | None = Relationship(back_populates="partner")
 
@@ -98,14 +98,15 @@ class Partner(SQLModel, table = True):
 
     products: List["Product"] | None = Relationship(back_populates="partners", link_model=PartnerPrice)
 
+order_token = secrets.token_urlsafe(16)
 class Order(SQLModel, table = True):
     id: int | None =  Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
     product_id: int = Field(foreign_key="product.id", ondelete="CASCADE")
     partner_id: int = Field(foreign_key="partner.id", ondelete="CASCADE")
     amount_paid: float = Field()
-    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    promocode: str = Field(default_factory=lambda: secrets.token_urlsafe(16))
+    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
+    promocode: str = Field(default_factory=lambda: order_token, sa_column_kwargs={"server_default": order_token})
     status: str = Field(default="Active", sa_column_kwargs={"server_default": text("'Active'")})
 
 class Address(SQLModel, table = True):
