@@ -64,11 +64,8 @@ class PartnerPrice(SQLModel, table = True):
     partner_id: int | None = Field(default=None, foreign_key="partner.id", ondelete="CASCADE", primary_key=True)
     partner_price: float = Field()
     stock_count: int | None = Field(default=0, sa_column_kwargs={"server_default": "0"}) # to help with the stocks (to find out whether the product is in stock or not (for one partner))
-    in_stock: bool = Field(default=True)
     partner_product_url: str | None = Field(default=None)
     date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
-
-    cart: Cart | None = Relationship(back_populates="partner")
 
 class Product(SQLModel, table = True):
     id: int | None = Field(default=None, primary_key=True)
@@ -78,8 +75,8 @@ class Product(SQLModel, table = True):
     category_id: int = Field(foreign_key="category.id", ondelete="CASCADE")
     description: str | None = Field(default=None)
     short_describe: str | None = Field(default=None)
-    our_deal: float | None = Field() # Formed by applying discount on the mininum price
-    count: int | None = Field(default=0) # Formed by sum of products sold by all partners
+    image_path: str | None = Field(default=None)
+    our_deal: float | None= Field(default=None) # Formed by applying discount on the mininum price
     avg_rating: float | None = Field(default=0.0, sa_column_kwargs={"server_default": "0.0"}) # Updated only when new user gives rating
     rating_count: int | None = Field(default=0, sa_column_kwargs={"server_default": "0"}) # Updated only when new user gives rating
 
@@ -91,14 +88,11 @@ class Partner(SQLModel, table = True):
     name: str = Field(unique=True)
     description: str | None = Field(default=None)
     website_url: str | None = Field(default = None, unique=True)
-    logo: str | None = Field(default=None, unique=True) # Image path of partner logo
+    # logo: str | None = Field(default=None, unique=True) # Image path of partner logo
     badge_color: str | None = Field(default="#4A90D9")
-    status: bool | None = Field(default=True)
-    active_deal_count: int | None = Field(default=0, sa_column_kwargs={"server_default": "0"})
 
     products: List["Product"] | None = Relationship(back_populates="partners", link_model=PartnerPrice)
 
-order_token = secrets.token_urlsafe(16)
 class Order(SQLModel, table = True):
     id: int | None =  Field(default=None, primary_key=True)
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
@@ -106,7 +100,7 @@ class Order(SQLModel, table = True):
     partner_id: int = Field(foreign_key="partner.id", ondelete="CASCADE")
     amount_paid: float = Field()
     date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
-    promocode: str = Field(default_factory=lambda: order_token, sa_column_kwargs={"server_default": order_token})
+    promocode: str = Field(default_factory=lambda: secrets.token_urlsafe(16)) # Check pgadmin for this column
     status: str = Field(default="Active", sa_column_kwargs={"server_default": text("'Active'")})
 
 class Address(SQLModel, table = True):
@@ -121,7 +115,6 @@ class Address(SQLModel, table = True):
     pincode: int | None = Field(default=None)
     type: str | None = Field(default="Home")
     isdefault: bool | None = Field(default=True)
-
 
     user: User | None = Relationship()
 

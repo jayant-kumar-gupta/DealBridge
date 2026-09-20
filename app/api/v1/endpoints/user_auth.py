@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import select
-from app.schemas.users import UserRegister, UserLoginResponse, AdminRegister, Token
+from app.schemas.users import UserRegister, UserLoginResponse, AdminRegister
 from app.core.database import SessionDep
 from app.models.database import User
 from app.core.utils import hash, verify, create_access_token, get_current_user
@@ -8,8 +8,8 @@ from fastapi.security import OAuth2PasswordRequestForm
 
 router = APIRouter(prefix="/login", tags=["Login & Authentication"])
 
-def require_admin(current_user: Token = Depends(get_current_user)):
-    if current_user.role != "admin":
+def require_admin(current_user: User = Depends(get_current_user)):
+    if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not allowed to access this page.")
 
     return current_user
@@ -56,7 +56,7 @@ def create_user(user_credentials: UserRegister, session: SessionDep):
     return {"message" : "Successfully registered"}
 
 @router.post("/register-admin", status_code=status.HTTP_201_CREATED)
-def create_admin(session: SessionDep, admin_credentials: AdminRegister, current_admin: Token = Depends(require_admin)):
+def create_admin(session: SessionDep, admin_credentials: AdminRegister, current_admin: User = Depends(require_admin)):
     statement = select(User).where(User.phone == admin_credentials.phone)
     existing_admin = session.exec(statement).first()
 

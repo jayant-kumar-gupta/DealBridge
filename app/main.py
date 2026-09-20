@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from app.core.database import create_db_and_tables
 from contextlib import asynccontextmanager
-from app.api.v1.endpoints import categories, user_auth
+from app.api.v1.endpoints import categories, user_auth, products, partners, partner_price
+from fastapi.staticfiles import StaticFiles
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -12,8 +13,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.mount(
+    "/assets",
+    StaticFiles(directory="assets"),
+    name="assets",
+)
+
 app.include_router(categories.router, prefix="/api/v1")
 app.include_router(user_auth.router, prefix="/api/v1")
+app.include_router(products.router, prefix="/api/v1")
+app.include_router(partners.router, prefix="/api/v1")
+app.include_router(partner_price.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"])
