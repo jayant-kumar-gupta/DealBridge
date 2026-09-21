@@ -40,6 +40,8 @@ def get_products_by_id(session: SessionDep, id: int,) -> Product:
 def create_product(product_detail: ProductCreate, session: SessionDep, current_user: User = Depends(require_admin)):
 
     category = session.get(Category, product_detail.category_id)
+    if not category:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
 
     product = Product(
         name=product_detail.name,
@@ -69,12 +71,18 @@ def update_product(session: SessionDep, product_detail: ProductCreate, id: int, 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No match for product with that id!")
 
     # If admin is updating category id:
-    category = session.get(Category, product_db.category_id)
-    if category.id != product_detail.category_id:
-        category.product_count -= 1
-        category = session.get(Category, product_detail.category_id)
-        category.product_count += 1
-        session.add(category)
+    if product_db.category_id != product_detail.category_id:
+        new_category = session.get(Category, product_detail.category_id)
+        if not new_category:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target category not found")
+
+        old_category = session.get(Category, product_db.category_id)
+        if old_category:
+            old_category.product_count = max(0, old_category.product_count - 1)
+            session.add(old_category)
+
+        new_category.product_count += 1
+        session.add(new_category)
 
     product_db.name=product_detail.name
     product_db.slug=slugify(product_detail.name)
@@ -98,11 +106,11 @@ def delete_product(session: SessionDep, id: int, current_user: User = Depends(re
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product with that id not found!")
 
     category = session.get(Category, product.category_id)
-
-    category.product_count -= 1
+    if category:
+        category.product_count = max(0, category.product_count - 1)
+        session.add(category)
 
     session.delete(product)
-    session.add(category)
     session.commit()
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)

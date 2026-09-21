@@ -28,7 +28,7 @@ class User(SQLModel, table = True):
 class Rating(SQLModel, table = True): # One User is allowed to rate only one time
     product_id: int | None = Field(default=None, foreign_key="product.id", ondelete="CASCADE", primary_key=True)
     user_id: int | None = Field(default=None, foreign_key="user.id", ondelete="CASCADE", primary_key=True)
-    rating: float | None = Field(default=None)
+    rating: int | None = Field(default=None)
 
 class ProductComment(SQLModel, table = True): # A User is allowed to comment multiple times
     id: int | None = Field(default=None, primary_key=True)
@@ -77,8 +77,8 @@ class Product(SQLModel, table = True):
     short_describe: str | None = Field(default=None)
     image_path: str | None = Field(default=None)
     our_deal: float | None= Field(default=None) # Formed by applying discount on the mininum price
-    avg_rating: float | None = Field(default=0.0, sa_column_kwargs={"server_default": "0.0"}) # Updated only when new user gives rating
-    rating_count: int | None = Field(default=0, sa_column_kwargs={"server_default": "0"}) # Updated only when new user gives rating
+    avg_rating: float = Field(default=0.0, sa_column_kwargs={"server_default": "0.0"}) # Updated only when new user gives rating
+    rating_count: int = Field(default=0, sa_column_kwargs={"server_default": "0"}) # Updated only when new user gives rating
 
     category: Category | None = Relationship(back_populates="products")
     partners: List["Partner"] | None = Relationship(back_populates="products", link_model=PartnerPrice)

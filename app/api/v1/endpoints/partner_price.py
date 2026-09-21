@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, HTTPException, Response, Depends
 from typing import List
 from app.core.database import SessionDep
 from sqlmodel import select, func
-from app.models.database import User, PartnerPrice, Product
+from app.models.database import User, PartnerPrice, Product, Partner
 from app.api.v1.endpoints.user_auth import require_admin
 
 router = APIRouter(prefix="/partner-prices", tags=["Partner Price"])
@@ -23,8 +23,25 @@ def sync_product_our_deal(session, product_id: int):
 def create_price(detail: PartnerPrice, session: SessionDep, current_user: User = Depends(require_admin)) -> PartnerPrice:
     # Adding Price for a product means the "our_deal" column in product table should/might be changed.
 
-    if detail.product_id is None: # Adding this statement just ignore red line in line 32.
-        raise HTTPException(status_code=400, detail="product_id is required")
+    if detail.product_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="product_id is required")
+    if detail.partner_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="partner_id is required")
+
+    product = session.get(Product, detail.product_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+
+    partner = session.get(Partner, detail.partner_id)
+    if not partner:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Partner not found")
+
+    existing_price = session.get(PartnerPrice, (detail.product_id, detail.partner_id))
+    if existing_price:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Price record already exists for product id {detail.product_id} and partner id {detail.partner_id}. Use PUT to update."
+        )
 
     session.add(detail)
     session.flush() # Make the new price visible in the current transaction
@@ -56,7 +73,7 @@ def get_price_by_partner_id(session: SessionDep, id: int) -> List[PartnerPrice]:
 # Delete Partner Price
 @router.delete("/{product_id}-{partner_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_price(session: SessionDep, product_id: int, partner_id: int, current_user: User = Depends(require_admin)):
-    price = session.exec(select(PartnerPrice).where(PartnerPrice.product_id == product_id, PartnerPrice.partner_id == partner_id)).first()
+    price = session.get(PartnerPrice, (product_id, partner_id))
     if not price:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No prices record for product id: {product_id} from partner id: {partner_id}")
 
@@ -69,9 +86,16 @@ def delete_price(session: SessionDep, product_id: int, partner_id: int, current_
 # Updating Partner price
 @router.put("/{product_id}-{partner_id}", response_model=PartnerPrice)
 def update_price(detail: PartnerPrice, session: SessionDep, product_id: int, partner_id: int, current_user: User = Depends(require_admin)) -> PartnerPrice:
-    price = session.exec(select(PartnerPrice).where(PartnerPrice.product_id == product_id, PartnerPrice.partner_id == partner_id)).first()
+    price = session.get(PartnerPrice, (product_id, partner_id))
     if not price:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No prices record for product id: {product_id} from partner id: {partner_id}")
+
+    if detail.product_id != product_id:
+        if not session.get(Product, detail.product_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Referenced product not found")
+    if detail.partner_id != partner_id:
+        if not session.get(Partner, detail.partner_id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Referenced partner not found")
 
     price.partner_id = detail.partner_id
     price.product_id = detail.product_id
@@ -82,6 +106,8 @@ def update_price(detail: PartnerPrice, session: SessionDep, product_id: int, par
     session.add(price)
     session.flush()
     sync_product_our_deal(session, product_id)
+    if detail.product_id != product_id:
+        sync_product_our_deal(session, detail.product_id)
     session.commit()
     session.refresh(price)
 
