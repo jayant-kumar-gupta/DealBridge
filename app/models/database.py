@@ -1,7 +1,6 @@
 from sqlmodel import SQLModel, Field, Relationship, text
 from typing import List
 from datetime import datetime, timezone
-import secrets
 
 
 class Category(SQLModel, table = True):
@@ -37,26 +36,13 @@ class ProductComment(SQLModel, table = True): # A User is allowed to comment mul
     comment: str | None = Field(default=None)
     date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
 
-class Notification(SQLModel, table = True):
-    id: int | None = Field(default=None, primary_key=True)
-    user_id: int | None = Field(default= None, foreign_key="user.id", ondelete="CASCADE")
-    type: str | None = Field(default=None)
-    title: str | None = Field(default=None)
-    message: str | None = Field(default=None)
-    icon: str | None = Field(default=None)
-    date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
-    link: str | None = Field(default=None)
-    read: bool | None = Field(default=False, sa_column_kwargs={"server_default": text("false")})
-
 class Cart(SQLModel, table = True):
     user_id: int | None = Field(default=None, foreign_key="user.id", ondelete="CASCADE", primary_key=True)
     product_id: int | None = Field(default=None, foreign_key="product.id", ondelete="CASCADE", primary_key=True)
-    quantity: int | None = Field(default=1, sa_column_kwargs={"server_default": "1"})
-    price: float | None = Field(default=0.0, sa_column_kwargs={"server_default": "0.0"})
+    quantity: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
     partner_id: int = Field(foreign_key="partner.id", ondelete="CASCADE")
-    brand: str | None = Field(default=None)
 
-    products: "Product" = Relationship()
+    product: "Product" = Relationship()
     partner: "Partner" = Relationship()
 
 class PartnerPrice(SQLModel, table = True):
@@ -66,6 +52,8 @@ class PartnerPrice(SQLModel, table = True):
     stock_count: int | None = Field(default=0, sa_column_kwargs={"server_default": "0"}) # to help with the stocks (to find out whether the product is in stock or not (for one partner))
     partner_product_url: str | None = Field(default=None)
     date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
+
+    product: "Product" = Relationship(back_populates="partnerprices")
 
 class Product(SQLModel, table = True):
     id: int | None = Field(default=None, primary_key=True)
@@ -80,8 +68,9 @@ class Product(SQLModel, table = True):
     avg_rating: float = Field(default=0.0, sa_column_kwargs={"server_default": "0.0"}) # Updated only when new user gives rating
     rating_count: int = Field(default=0, sa_column_kwargs={"server_default": "0"}) # Updated only when new user gives rating
 
-    category: Category | None = Relationship(back_populates="products")
+    category: "Category" = Relationship(back_populates="products")
     partners: List["Partner"] | None = Relationship(back_populates="products", link_model=PartnerPrice)
+    partnerprices: List["PartnerPrice"] = Relationship(back_populates="product")
 
 class Partner(SQLModel, table = True):
     id: int | None = Field(default=None, primary_key=True)
@@ -95,13 +84,25 @@ class Partner(SQLModel, table = True):
 
 class Order(SQLModel, table = True):
     id: int | None =  Field(default=None, primary_key=True)
-    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
-    product_id: int = Field(foreign_key="product.id", ondelete="CASCADE")
-    partner_id: int = Field(foreign_key="partner.id", ondelete="CASCADE")
+    user_id: int | None = Field(foreign_key="user.id", ondelete="CASCADE")
+    promocode: str = Field()
     amount_paid: float = Field()
     date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
-    promocode: str = Field(default_factory=lambda: secrets.token_urlsafe(16)) # Check pgadmin for this column
     status: str = Field(default="Active", sa_column_kwargs={"server_default": text("'Active'")})
+
+    items: List["OrderItem"] = Relationship(back_populates="order")
+
+class OrderItem(SQLModel, table = True):
+    id: int | None = Field(default = None, primary_key=True)
+    order_id: int = Field(foreign_key="order.id", ondelete="CASCADE")
+    product_id: int = Field(foreign_key="product.id")
+    partner_id: int = Field(foreign_key="partner.id")
+    quantity: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
+    price: float = Field()
+
+    order: "Order" = Relationship(back_populates="items")
+    product: "Product" = Relationship()
+    partner: "Partner" = Relationship()
 
 class Address(SQLModel, table = True):
     id: int | None =  Field(default=None, primary_key=True)
@@ -114,7 +115,7 @@ class Address(SQLModel, table = True):
     state: str = Field()
     pincode: int | None = Field(default=None)
     type: str | None = Field(default="Home")
-    isdefault: bool | None = Field(default=True)
+    isdefault: bool = Field(default=True)
 
-    user: User | None = Relationship()
+    user: "User" = Relationship()
 

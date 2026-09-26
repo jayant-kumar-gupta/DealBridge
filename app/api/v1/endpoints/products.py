@@ -5,7 +5,7 @@ from app.core.database import SessionDep
 from typing import Annotated, List
 from app.api.v1.endpoints.user_auth import require_admin
 from app.models.database import Product, User, Category
-from app.schemas.product import ProductCreate, ProductRead
+from app.schemas.product import ProductCreate, ProductRead, ProductDetailRead
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/products", tags=["products"])
 @router.get("/", response_model=List[ProductRead])
 def get_products(
         session: SessionDep, 
-        limit: Annotated[int, Query(le=20)] = 20, 
+        limit: Annotated[int, Query(le=20)] = 20,
         offset: int = 0, 
         name: str | None = None,
     ) -> List[Product]:
@@ -26,14 +26,16 @@ def get_products(
     return list(products)
 
 # Reading Products By ID
-@router.get("/{id}", response_model=ProductRead)
-def get_products_by_id(session: SessionDep, id: int,) -> Product:
+@router.get("/{id}", response_model = ProductDetailRead)
+def get_products_by_id(session: SessionDep, id: int,):
     product = session.get(Product, id)
 
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No products found with that id!")
 
-    return product
+    partnerprices = product.partnerprices
+
+    return {"product_info": product, "partner_prices": partnerprices}
 
 # Creating product: Create products should modify the product_count in Category table for a specific category
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=ProductRead)

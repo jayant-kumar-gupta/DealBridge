@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-
+from datetime import datetime
+from typing import List
 
 class ProductBase(BaseModel):
     name: str
@@ -17,3 +18,15 @@ class ProductRead(ProductBase):
     our_deal: float
     avg_rating: float
     rating_count: int
+
+class PartnerPrice(BaseModel):
+    product_id: int
+    partner_id: int
+    partner_price: float
+    stock_count: int
+    partner_product_url: str | None = None
+    date: datetime
+
+class ProductDetailRead(BaseModel):
+    product_info: ProductRead
+    partner_prices: List[PartnerPrice]
