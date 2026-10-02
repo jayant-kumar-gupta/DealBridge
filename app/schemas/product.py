@@ -25,8 +25,6 @@ class ProductRead(ProductBase):
 class PartnerPrice(BaseModel):
     product_id: int
     partner_id: int
-    partner_name: str | None = None
-    partner_color: str | None = None
     partner_price: float
     stock_count: int
     partner_product_url: str | None = None
@@ -34,7 +32,6 @@ class PartnerPrice(BaseModel):
 
 class ProductDetailRead(BaseModel):
     product_info: ProductRead
-    category_name: str | None = None
     specs: List[ProductSpecRead] | None = None
     partner_prices: List[PartnerPrice] | None = None
     tags: List[TagRead] | None = None

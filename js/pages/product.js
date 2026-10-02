@@ -24,7 +24,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     try {
-        const productDetail = await api.get(`/products/${productId}`);
+        const [productDetail, partners, categories] = await Promise.all([
+            api.get(`/products/${productId}`),
+            api.get('/partners/').catch(() => []),
+            api.get('/categories/').catch(() => []),
+        ]);
+
         if (!productDetail || !productDetail.product_info) {
             showProductError();
             return;
@@ -33,12 +38,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentProduct = productDetail.product_info;
         currentProductDetail = productDetail;
 
+        const partnerMap = new Map((partners || []).map(p => [p.id, p]));
+        const currentCategory = (categories || []).find(c => c.id === currentProduct.category_id);
+        const categoryName = currentCategory ? currentCategory.name : 'Category';
+
         document.title = `${currentProduct.name} — DealBridge`;
         
-        populateProductDetails(productDetail);
+        populateProductDetails(productDetail, categoryName);
         setupGallery(productDetail);
         setupActions();
-        populateComparisonTable(productDetail);
+        populateComparisonTable(productDetail, partnerMap);
         setupPriceChart(productDetail);
         populateSimilarProducts(currentProduct.category_id);
     } catch (error) {
@@ -54,14 +63,13 @@ function showProductError() {
     if (errorEl) errorEl.style.display = 'block';
 }
 
-function populateProductDetails(productDetail) {
+function populateProductDetails(productDetail, categoryName) {
     const p = productDetail.product_info;
-    const catName = productDetail.category_name || 'Category';
     
     // Breadcrumb
     const bcCat = document.getElementById('breadcrumb-cat');
     if (bcCat) {
-        bcCat.textContent = catName;
+        bcCat.textContent = categoryName;
         bcCat.href = p.category_id ? `/category.html?id=${p.category_id}` : '#';
     }
     const bcName = document.getElementById('breadcrumb-name');
@@ -253,7 +261,7 @@ function setupActions() {
     }
 }
 
-function populateComparisonTable(productDetail) {
+function populateComparisonTable(productDetail, partnerMap) {
     const tbody = document.getElementById('comparison-tbody');
     if (!tbody) return;
     
@@ -268,8 +276,9 @@ function populateComparisonTable(productDetail) {
     const sortedPrices = [...partnerPrices].sort((a, b) => a.partner_price - b.partner_price);
     
     tbody.innerHTML = sortedPrices.map((pp, i) => {
-        const name = pp.partner_name || 'Partner';
-        const color = pp.partner_color || '#1d8ba0';
+        const partner = partnerMap.get(pp.partner_id) || { name: 'Partner', badge_color: '#1d8ba0' };
+        const name = partner.name || 'Partner';
+        const color = partner.badge_color || '#1d8ba0';
         const price = pp.partner_price;
         const savings = price - (p.our_deal || 0);
         const isBest = i === 0;
