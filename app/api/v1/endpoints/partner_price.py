@@ -2,7 +2,8 @@ from fastapi import APIRouter, status, HTTPException, Response, Depends
 from typing import List
 from app.core.database import SessionDep
 from sqlmodel import select, func
-from app.models.database import User, PartnerPrice, Product, Partner
+from datetime import datetime, timezone
+from app.models.database import User, PartnerPrice, Product, Partner, ProductPriceHistory
 from app.api.v1.endpoints.user_auth import require_admin
 
 router = APIRouter(prefix="/partner-prices", tags=["Partner Price"])
@@ -14,9 +15,22 @@ def sync_product_our_deal(session, product_id: int):
         return
     
     min_price = session.exec(select(func.min(PartnerPrice.partner_price)).where(PartnerPrice.product_id == product_id)).one()
-    product.our_deal = round(min_price * 0.98, 2) if min_price is not None else None
+    new_deal = round(min_price * 0.98, 2) if min_price is not None else None
+
+    if product.our_deal == new_deal:
+        return
+
+    product.our_deal = new_deal
 
     session.add(product)
+    if new_deal is not None:
+        session.add(
+            ProductPriceHistory(
+                product_id=product_id,
+                date=datetime.now(timezone.utc),
+                price=new_deal,
+            )
+        )
 
 # Create Partner_Price
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=PartnerPrice)
@@ -89,6 +103,8 @@ def update_price(detail: PartnerPrice, session: SessionDep, product_id: int, par
     price = session.get(PartnerPrice, (product_id, partner_id))
     if not price:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No prices record for product id: {product_id} from partner id: {partner_id}")
+    if detail.product_id is None or detail.partner_id is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="product_id and partner_id are required")
 
     if detail.product_id != product_id:
         if not session.get(Product, detail.product_id):
@@ -102,6 +118,7 @@ def update_price(detail: PartnerPrice, session: SessionDep, product_id: int, par
     price.partner_price = detail.partner_price
     price.stock_count = detail.stock_count
     price.partner_product_url = detail.partner_product_url
+    price.date = datetime.now(timezone.utc)
 
     session.add(price)
     session.flush()

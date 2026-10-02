@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import create_db_and_tables
 from contextlib import asynccontextmanager
-from app.api.v1.endpoints import categories, user_auth, products, partners, partner_price, ratings_reviews, carts, orders, addresses
+from app.api.v1.endpoints import categories, user_auth, products, partners, partner_price, ratings_reviews, carts, orders, addresses, product_spec, tags, product_tags, price_history
 from fastapi.staticfiles import StaticFiles
 
 @asynccontextmanager
@@ -31,6 +31,10 @@ app.include_router(ratings_reviews.router, prefix="/api/v1")
 app.include_router(carts.router, prefix="/api/v1")
 app.include_router(orders.router, prefix="/api/v1")
 app.include_router(addresses.router, prefix="/api/v1")
+app.include_router(product_spec.router, prefix="/api/v1")
+app.include_router(tags.router, prefix="/api/v1")
+app.include_router(product_tags.router, prefix="/api/v1")
+app.include_router(price_history.router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["Health"])

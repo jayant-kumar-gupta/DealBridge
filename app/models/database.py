@@ -55,6 +55,27 @@ class PartnerPrice(SQLModel, table = True):
 
     product: "Product" = Relationship(back_populates="partnerprices")
 
+class ProductTag(SQLModel, table = True):
+    product_id: int = Field(
+        foreign_key="product.id",
+        ondelete="CASCADE",
+        primary_key=True,
+    )
+    tag_id: int = Field(
+        foreign_key="tag.id",
+        ondelete="CASCADE",
+        primary_key=True,
+    )
+
+class Tag(SQLModel, table = True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(unique=True, index=True, max_length=50)
+
+    products: List["Product"] | None = Relationship(
+        back_populates="tags",
+        link_model=ProductTag,
+    )
+
 class Product(SQLModel, table = True):
     id: int | None = Field(default=None, primary_key=True)
     name: str = Field(index=True)
@@ -71,6 +92,40 @@ class Product(SQLModel, table = True):
     category: "Category" = Relationship(back_populates="products")
     partners: List["Partner"] | None = Relationship(back_populates="products", link_model=PartnerPrice)
     partnerprices: List["PartnerPrice"] = Relationship(back_populates="product")
+    specs: List["ProductSpec"] = Relationship(
+        back_populates="product",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+    price_history: List["ProductPriceHistory"] = Relationship(
+        back_populates="product",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+    tags: List["Tag"] | None = Relationship(
+        back_populates="products",
+        link_model=ProductTag,
+    )
+
+class ProductSpec(SQLModel, table = True):
+    product_id: int = Field(
+        foreign_key="product.id",
+        ondelete="CASCADE",
+        primary_key=True,
+    )
+    label: str = Field(primary_key=True, max_length=100)
+    value: str = Field(max_length=500)
+
+    product: "Product" = Relationship(back_populates="specs")
+
+class ProductPriceHistory(SQLModel, table = True):
+    product_id: int = Field(
+        foreign_key="product.id",
+        ondelete="CASCADE",
+        primary_key=True,
+    )
+    date: datetime = Field(primary_key=True)
+    price: float
+
+    product: "Product" = Relationship(back_populates="price_history")
 
 class Partner(SQLModel, table = True):
     id: int | None = Field(default=None, primary_key=True)

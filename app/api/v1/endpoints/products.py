@@ -34,8 +34,17 @@ def get_products_by_id(session: SessionDep, id: int,):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No products found with that id!")
 
     partnerprices = product.partnerprices
+    specs = product.specs
+    tags = product.tags
+    price_history = product.price_history
 
-    return {"product_info": product, "partner_prices": partnerprices}
+    return {
+        "product_info": product,
+        "specs": specs,
+        "partner_prices": partnerprices,
+        "tags": tags,
+        "price_history": price_history,
+    }
 
 # Creating product: Create products should modify the product_count in Category table for a specific category
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=ProductRead)

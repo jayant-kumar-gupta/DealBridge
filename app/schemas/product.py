@@ -1,6 +1,9 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import List
+from app.schemas.tag import TagRead
+from app.schemas.price_history import ProductPriceHistoryRead
+from app.schemas.product_spec import ProductSpecRead
 
 class ProductBase(BaseModel):
     name: str
@@ -29,4 +32,7 @@ class PartnerPrice(BaseModel):
 
 class ProductDetailRead(BaseModel):
     product_info: ProductRead
+    specs: List[ProductSpecRead] | None = None
     partner_prices: List[PartnerPrice] | None = None
+    tags: List[TagRead] | None = None
+    price_history: List[ProductPriceHistoryRead] | None = None
