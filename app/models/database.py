@@ -64,7 +64,7 @@ class Product(SQLModel, table = True):
     description: str | None = Field(default=None)
     short_describe: str | None = Field(default=None)
     image_path: str | None = Field(default=None)
-    our_deal: float | None= Field(default=None) # Formed by applying discount on the mininum price
+    our_deal: float | None = Field(default = None) # Formed by applying discount on the mininum price
     avg_rating: float = Field(default=0.0, sa_column_kwargs={"server_default": "0.0"}) # Updated only when new user gives rating
     rating_count: int = Field(default=0, sa_column_kwargs={"server_default": "0"}) # Updated only when new user gives rating
 

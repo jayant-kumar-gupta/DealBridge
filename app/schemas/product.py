@@ -15,7 +15,7 @@ class ProductCreate(ProductBase):
 
 class ProductRead(ProductBase):
     id: int
-    our_deal: float
+    our_deal: float | None = None
     avg_rating: float
     rating_count: int
 
@@ -29,4 +29,4 @@ class PartnerPrice(BaseModel):
 
 class ProductDetailRead(BaseModel):
     product_info: ProductRead
-    partner_prices: List[PartnerPrice]
+    partner_prices: List[PartnerPrice] | None = None

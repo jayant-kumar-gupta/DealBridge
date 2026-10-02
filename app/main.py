@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import create_db_and_tables
 from contextlib import asynccontextmanager
 from app.api.v1.endpoints import categories, user_auth, products, partners, partner_price, ratings_reviews, carts, orders, addresses
@@ -13,10 +14,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.mount(
-    "/assets",
-    StaticFiles(directory="assets"),
-    name="assets",
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # In production, specify exact domains like ["https://dealbridge.com"]
+    allow_credentials=True, # Allows cookies and Authorization headers
+    allow_methods=["*"], # Allows all standard HTTP methods: GET, POST, PUT, DELETE, OPTIONS
+    allow_headers=["*"], # Allows all request headers (e.g. Content-Type, Authorization)
 )
 
 app.include_router(categories.router, prefix="/api/v1")
@@ -34,3 +37,9 @@ app.include_router(addresses.router, prefix="/api/v1")
 def health_check():
     '''Health check endpoint to verify backend status.'''
     return {"status": "healthy", "service": "DealBridge API", "version":"1.0.0"}
+
+app.mount(
+    "/",
+    StaticFiles(directory=".", html=True),
+    name="static",
+)
