@@ -4,7 +4,7 @@ from slugify import slugify
 from app.core.database import SessionDep
 from typing import Annotated, List
 from app.api.v1.endpoints.user_auth import require_admin
-from app.models.database import Product, User, Category
+from app.models.database import Product, User, Category, Partner
 from app.schemas.product import ProductCreate, ProductRead, ProductDetailRead
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -16,10 +16,13 @@ def get_products(
         limit: Annotated[int, Query(le=20)] = 20,
         offset: int = 0, 
         name: str | None = None,
+        category_id: int | None = None,
     ) -> List[Product]:
     statement = select(Product)
     if name:
         statement = statement.where(func.lower(Product.name).like(f"%{name.lower()}%"))
+    if category_id:
+        statement = statement.where(Product.category_id == category_id)
 
     products = session.exec(statement.offset(offset).limit(limit)).all()
 
@@ -33,15 +36,30 @@ def get_products_by_id(session: SessionDep, id: int,):
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No products found with that id!")
 
-    partnerprices = product.partnerprices
+    partner_prices_data = []
+    for pp in product.partnerprices:
+        partner = session.get(Partner, pp.partner_id)
+        partner_prices_data.append({
+            "product_id": pp.product_id,
+            "partner_id": pp.partner_id,
+            "partner_name": partner.name if partner else "Partner",
+            "partner_color": partner.badge_color if partner else "#4A90D9",
+            "partner_price": pp.partner_price,
+            "stock_count": pp.stock_count,
+            "partner_product_url": pp.partner_product_url,
+            "date": pp.date,
+        })
+
+    category = product.category
     specs = product.specs
     tags = product.tags
     price_history = product.price_history
 
     return {
         "product_info": product,
+        "category_name": category.name if category else None,
         "specs": specs,
-        "partner_prices": partnerprices,
+        "partner_prices": partner_prices_data,
         "tags": tags,
         "price_history": price_history,
     }
