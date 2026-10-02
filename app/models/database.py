@@ -69,8 +69,8 @@ class Product(SQLModel, table = True):
     rating_count: int = Field(default=0, sa_column_kwargs={"server_default": "0"}) # Updated only when new user gives rating
 
     category: "Category" = Relationship(back_populates="products")
-    partners: List["Partner"] | None = Relationship(back_populates="products", link_model=PartnerPrice)
-    partnerprices: List["PartnerPrice"] = Relationship(back_populates="product")
+    partners: List["Partner"] | None = Relationship(back_populates="products", link_model=PartnerPrice, sa_relationship_kwargs={"overlaps": "partnerprices,product"})
+    partnerprices: List["PartnerPrice"] = Relationship(back_populates="product", sa_relationship_kwargs={"overlaps": "partners"})
 
 class Partner(SQLModel, table = True):
     id: int | None = Field(default=None, primary_key=True)
@@ -80,7 +80,7 @@ class Partner(SQLModel, table = True):
     # logo: str | None = Field(default=None, unique=True) # Image path of partner logo
     badge_color: str | None = Field(default="#4A90D9")
 
-    products: List["Product"] | None = Relationship(back_populates="partners", link_model=PartnerPrice)
+    products: List["Product"] | None = Relationship(back_populates="partners", link_model=PartnerPrice, sa_relationship_kwargs={"overlaps": "partnerprices,product"})
 
 class Order(SQLModel, table = True):
     id: int | None =  Field(default=None, primary_key=True)

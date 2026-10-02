@@ -1,9 +1,9 @@
 import { initHeader } from '../components/header.js';
 import { initFooter } from '../components/footer.js';
-import { getCurrentUser, isLoggedIn, logout } from '../state/auth.js';
+import { getCurrentUser, isLoggedIn, logout, fetchCurrentUser, updateProfile } from '../state/auth.js';
 import { showToast } from '../components/toast.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initHeader();
     initFooter();
 
@@ -21,51 +21,73 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const user = getCurrentUser();
-    if (user) {
-        document.getElementById('profile-name').textContent = user.name;
-        document.getElementById('profile-email').textContent = user.email;
-        document.getElementById('profile-phone').textContent = user.phone || '+91 98765 43210';
-        document.getElementById('profile-date').textContent = user.joinDate || 'Jan 2026';
-        
-        const initials = user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    // Refresh user from server if possible, otherwise use cached
+    let user = await fetchCurrentUser() || getCurrentUser();
+
+    function renderUserProfile(u) {
+        if (!u) return;
+        document.getElementById('profile-name').textContent = u.name || 'User';
+        document.getElementById('profile-email').textContent = u.email || '';
+        document.getElementById('profile-phone').textContent = u.phone || '';
+        document.getElementById('profile-date').textContent = u.joinDate || 'N/A';
+
+        const nameParts = (u.name || 'User').split(' ').filter(Boolean);
+        const initials = nameParts.map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U';
         document.getElementById('profile-avatar').textContent = initials;
     }
+
+    renderUserProfile(user);
 
     const editBtn = document.getElementById('edit-profile-btn');
     const cancelBtn = document.getElementById('cancel-edit-btn');
     const editFormSection = document.getElementById('edit-profile-form');
     const profileForm = document.getElementById('profile-form');
 
-    editBtn.addEventListener('click', () => {
-        document.getElementById('edit-name').value = user.name;
-        document.getElementById('edit-email').value = user.email;
-        document.getElementById('edit-phone').value = user.phone || '+91 98765 43210';
-        editFormSection.style.display = 'block';
-        editBtn.style.display = 'none';
-    });
+    if (editBtn) {
+        editBtn.addEventListener('click', () => {
+            const current = getCurrentUser() || {};
+            document.getElementById('edit-name').value = current.name || '';
+            document.getElementById('edit-email').value = current.email || '';
+            document.getElementById('edit-phone').value = current.phone || '';
+            editFormSection.style.display = 'block';
+            editBtn.style.display = 'none';
+        });
+    }
 
-    cancelBtn.addEventListener('click', () => {
-        editFormSection.style.display = 'none';
-        editBtn.style.display = 'inline-block';
-    });
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            editFormSection.style.display = 'none';
+            editBtn.style.display = 'inline-block';
+        });
+    }
 
-    profileForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        // In a real app, we'd call an update API and update state
-        const newName = document.getElementById('edit-name').value;
-        const newEmail = document.getElementById('edit-email').value;
-        const newPhone = document.getElementById('edit-phone').value;
-        
-        document.getElementById('profile-name').textContent = newName;
-        document.getElementById('profile-email').textContent = newEmail;
-        document.getElementById('profile-phone').textContent = newPhone;
-        
-        const initials = newName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-        document.getElementById('profile-avatar').textContent = initials;
+    if (profileForm) {
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = profileForm.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
 
-        showToast('Profile updated successfully', 'success');
-        editFormSection.style.display = 'none';
-        editBtn.style.display = 'inline-block';
-    });
+            const newName = document.getElementById('edit-name').value.trim();
+            const newEmail = document.getElementById('edit-email').value.trim();
+            const newPhone = document.getElementById('edit-phone').value.trim();
+
+            const result = await updateProfile({
+                name: newName,
+                email: newEmail,
+                phone: newPhone,
+            });
+
+            if (submitBtn) submitBtn.disabled = false;
+
+            if (result.success) {
+                renderUserProfile(result.user);
+                showToast('Profile updated successfully', 'success');
+                editFormSection.style.display = 'none';
+                editBtn.style.display = 'inline-block';
+            } else {
+                showToast(result.message || 'Failed to update profile', 'error');
+            }
+        });
+    }
 });
+

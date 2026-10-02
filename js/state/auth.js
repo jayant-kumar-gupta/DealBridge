@@ -1,41 +1,86 @@
-import { getUser } from '../data/users.js';
+import { api } from '../utils/api.js';
 
 const AUTH_KEY = 'dealbridge_auth';
+const TOKEN_KEY = 'dealbridge_token';
+
+/**
+ * Normalizes user data from the backend to ensure frontend compatibility.
+ * Reconciles backend fields with frontend expectations.
+ */
+function normalizeUser(rawUser) {
+  if (!rawUser) return null;
+  const name = rawUser.name || [rawUser.firstname, rawUser.lastname].filter(Boolean).join(' ') || rawUser.email?.split('@')[0] || 'User';
+  const role = rawUser.role || (rawUser.is_admin ? 'admin' : 'user');
+  const joinDate = rawUser.joinDate || (rawUser.join_date ? new Date(rawUser.join_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Jan 2026');
+
+  return {
+    id: rawUser.id,
+    name,
+    email: rawUser.email || '',
+    phone: rawUser.phone || '',
+    role,
+    is_admin: Boolean(rawUser.is_admin || role === 'admin'),
+    joinDate,
+    join_date: rawUser.join_date || null,
+    avatar: rawUser.avatar || null,
+  };
+}
 
 export function isLoggedIn() {
-  return localStorage.getItem(AUTH_KEY) !== null;
+  return localStorage.getItem(AUTH_KEY) !== null && localStorage.getItem(TOKEN_KEY) !== null;
 }
 
 export function getCurrentUser() {
   const authData = localStorage.getItem(AUTH_KEY);
   if (!authData) return null;
-  return JSON.parse(authData);
+  try {
+    return JSON.parse(authData);
+  } catch {
+    return null;
+  }
 }
 
 export function isAdmin() {
   const user = getCurrentUser();
-  return user && user.role === 'admin';
+  return Boolean(user && (user.role === 'admin' || user.is_admin));
 }
 
-export function login(email, password) {
-  // Check against demo credentials
-  const userEntry = Object.values(demoCredentials).find(
-    cred => cred.email === email && cred.password === password
-  );
-  if (!userEntry) {
-    return { success: false, message: 'Invalid email or password' };
+export async function login(usernameOrEmail, password) {
+  try {
+    const data = await api.post('/login/', {
+      username: usernameOrEmail,
+      password: password
+    });
+
+    if (!data || !data.access_token) {
+      return { success: false, message: 'Invalid response from server' };
+    }
+
+    localStorage.setItem(TOKEN_KEY, data.access_token);
+    const user = normalizeUser(data.user);
+    if (user) {
+      localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+    }
+
+    document.dispatchEvent(new CustomEvent('auth-change', { detail: { user, loggedIn: true } }));
+    return { success: true, user };
+  } catch (error) {
+    return { success: false, message: error.message || 'Login failed' };
   }
-  const user = users.find(u => u.email === email);
-  if (!user) {
-    return { success: false, message: 'User not found' };
+}
+
+export async function register(userData) {
+  try {
+    const data = await api.post('/login/register', userData);
+    return { success: true, message: data.message || 'Registered successfully', user: normalizeUser(data.user) };
+  } catch (error) {
+    return { success: false, message: error.message || 'Registration failed' };
   }
-  localStorage.setItem(AUTH_KEY, JSON.stringify(user));
-  document.dispatchEvent(new CustomEvent('auth-change', { detail: { user, loggedIn: true } }));
-  return { success: true, user };
 }
 
 export function logout() {
   localStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem(TOKEN_KEY);
   document.dispatchEvent(new CustomEvent('auth-change', { detail: { user: null, loggedIn: false } }));
 }
 
@@ -53,4 +98,33 @@ export function requireAdmin() {
     return false;
   }
   return true;
+}
+
+export async function fetchCurrentUser() {
+  try {
+    const rawUser = await api.get('/login/me');
+    const user = normalizeUser(rawUser);
+    if (user) {
+      localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+      document.dispatchEvent(new CustomEvent('auth-change', { detail: { user, loggedIn: true } }));
+    }
+    return user;
+  } catch (error) {
+    console.error('Failed to fetch current user:', error);
+    return null;
+  }
+}
+
+export async function updateProfile(profileData) {
+  try {
+    const updatedRaw = await api.put('/login/me', profileData);
+    const user = normalizeUser(updatedRaw);
+    if (user) {
+      localStorage.setItem(AUTH_KEY, JSON.stringify(user));
+      document.dispatchEvent(new CustomEvent('auth-change', { detail: { user, loggedIn: true } }));
+    }
+    return { success: true, user };
+  } catch (error) {
+    return { success: false, message: error.message || 'Update failed' };
+  }
 }

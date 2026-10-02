@@ -22,6 +22,15 @@ app.add_middleware(
     allow_headers=["*"], # Allows all request headers (e.g. Content-Type, Authorization)
 )
 
+@app.middleware("http")
+async def disable_cache_for_static(request, call_next):
+    response = await call_next(request)
+    if request.url.path.endswith((".html", ".js", ".css")) or request.url.path == "/":
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 app.include_router(categories.router, prefix="/api/v1")
 app.include_router(user_auth.router, prefix="/api/v1")
 app.include_router(products.router, prefix="/api/v1")
