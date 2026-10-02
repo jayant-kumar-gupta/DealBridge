@@ -1,4 +1,4 @@
-import { users, demoCredentials } from '../data/users.js';
+import { getUser } from '../data/users.js';
 
 const AUTH_KEY = 'dealbridge_auth';
 

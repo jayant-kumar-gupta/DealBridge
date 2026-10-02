@@ -1,27 +1,9 @@
-export const users = [
-  {
-    id: 1,
-    name: 'Jayant Kumar',
-    email: 'jayant@example.com',
-    phone: '+91 98765 43210',
-    avatar: null,
-    role: 'user',
-    joinDate: '2025-06-15'
-  },
-  {
-    id: 2,
-    name: 'Admin User',
-    email: 'admin@dealbridge.com',
-    phone: '+91 99999 00000',
-    avatar: null,
-    role: 'admin',
-    joinDate: '2025-01-01'
+import { api } from "../utils/api";
+
+export async function getUser(id){
+  const user = await api.get("/api/v1/login/"+id); // Imagine having millions of account. This website has to fetch whole database for whether that user exist in that database or not. You have index=True enabled in users table. will that help? consider it.
+  if (!user){
+    return;
   }
-];
-export const demoCredentials = {
-  user: { email: 'jayant@example.com', password: 'demo123' },
-  admin: { email: 'admin@dealbridge.com', password: 'admin123' }
-};
-export function getUserById(id) {
-  return users.find(u => u.id === id);
+  return user;
 }
