@@ -6,6 +6,7 @@ import { renderPriceChart, filterPriceHistory } from '../components/price-chart.
 import { renderProductCard } from '../components/product-card.js';
 import { addToCart } from '../state/cart.js';
 import { toggleWishlist, isInWishlist } from '../state/wishlist.js';
+import { isLoggedIn, getCurrentUser } from '../state/auth.js';
 import { showToast } from '../components/toast.js';
 
 let currentProduct = null;
@@ -49,6 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupActions();
         setupPriceChart(productDetail, partnerMap);
         populateSimilarProducts(currentProduct.category_id);
+        setupRatingsAndReviews(productId);
     } catch (error) {
         console.error('Failed to load product details:', error);
         showProductError();
@@ -380,4 +382,314 @@ async function populateSimilarProducts(categoryId) {
         console.error('Failed to load similar products:', error);
         container.innerHTML = '<p style="color: var(--color-text-secondary);">Could not load similar products.</p>';
     }
+}
+
+async function setupRatingsAndReviews(productId) {
+    const avgNumberEl = document.getElementById('review-avg-number');
+    const avgStarsEl = document.getElementById('review-avg-stars');
+    const totalCountEl = document.getElementById('review-total-count');
+    
+    const userRatingWidget = document.getElementById('user-rating-widget');
+    const userRatingStatus = document.getElementById('user-rating-status');
+    const ratingLoginPrompt = document.getElementById('rating-login-prompt');
+    const ratingLoginLink = document.getElementById('rating-login-link');
+    
+    const commentForm = document.getElementById('comment-form');
+    const commentInput = document.getElementById('comment-input');
+    const btnSubmitComment = document.getElementById('btn-submit-comment');
+    const commentLoginPrompt = document.getElementById('comment-login-prompt');
+    const commentLoginLink = document.getElementById('comment-login-link');
+    
+    const loginUrl = `/login.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    if (ratingLoginLink) ratingLoginLink.href = loginUrl;
+    if (commentLoginLink) commentLoginLink.href = loginUrl;
+    
+    function updateRatingSummary(avgRating, ratingCount) {
+        const avg = avgRating || 0;
+        const count = ratingCount || 0;
+        if (avgNumberEl) avgNumberEl.textContent = avg.toFixed(1);
+        if (avgStarsEl) avgStarsEl.innerHTML = generateStarRatingHTML(avg);
+        if (totalCountEl) totalCountEl.textContent = `Based on ${count.toLocaleString()} rating${count === 1 ? '' : 's'}`;
+    }
+    
+    if (currentProduct) {
+        updateRatingSummary(currentProduct.avg_rating || 0, currentProduct.rating_count || 0);
+    }
+    
+    const loggedIn = isLoggedIn();
+    const currentUser = getCurrentUser();
+    let userRating = null;
+    let isRatingBusy = false;
+    
+    function renderUserRatingStars(rating) {
+        const starBtns = userRatingWidget ? userRatingWidget.querySelectorAll('.star-btn') : [];
+        starBtns.forEach(btn => {
+            const val = parseInt(btn.dataset.value, 10);
+            if (rating && val <= rating) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        
+        if (userRatingStatus) {
+            if (!loggedIn) {
+                userRatingStatus.textContent = 'Log in to submit your rating';
+            } else if (rating) {
+                userRatingStatus.textContent = `Your rating: ${rating} / 5 ★ (Click ${rating} to remove)`;
+            } else {
+                userRatingStatus.textContent = 'Click a star to rate';
+            }
+        }
+    }
+    
+    if (!loggedIn) {
+        if (ratingLoginPrompt) ratingLoginPrompt.style.display = 'block';
+        if (commentForm) commentForm.style.display = 'none';
+        if (commentLoginPrompt) commentLoginPrompt.style.display = 'block';
+        renderUserRatingStars(null);
+    } else {
+        if (ratingLoginPrompt) ratingLoginPrompt.style.display = 'none';
+        if (commentForm) commentForm.style.display = 'block';
+        if (commentLoginPrompt) commentLoginPrompt.style.display = 'none';
+        
+        // Fetch current user rating for this product
+        try {
+            const ratingData = await api.get(`/ratings/${productId}`);
+            if (ratingData && typeof ratingData.rating === 'number') {
+                userRating = ratingData.rating;
+            }
+        } catch (e) {
+            // 404 means unrated, normal
+            userRating = null;
+        }
+        renderUserRatingStars(userRating);
+    }
+    
+    // Interactive Star Hover & Clicks
+    if (userRatingWidget) {
+        const starBtns = userRatingWidget.querySelectorAll('.star-btn');
+        
+        starBtns.forEach(btn => {
+            btn.addEventListener('mouseenter', () => {
+                const hoverVal = parseInt(btn.dataset.value, 10);
+                starBtns.forEach(b => {
+                    const v = parseInt(b.dataset.value, 10);
+                    b.classList.toggle('hovered', v <= hoverVal);
+                });
+            });
+            
+            btn.addEventListener('click', async () => {
+                if (!isLoggedIn()) {
+                    showToast('Please log in to rate this product', 'info');
+                    return;
+                }
+                if (isRatingBusy) return;
+                
+                const clickedValue = parseInt(btn.dataset.value, 10);
+                isRatingBusy = true;
+                
+                try {
+                    if (userRating === null) {
+                        // 1. Post new rating
+                        await api.post('/ratings/', {
+                            product_id: productId,
+                            rating: clickedValue
+                        });
+                        userRating = clickedValue;
+                        renderUserRatingStars(userRating);
+                        showToast(`Rated ${clickedValue} star${clickedValue > 1 ? 's' : ''}!`, 'success');
+                    } else if (userRating === clickedValue) {
+                        // 2. Remove rating (DELETE)
+                        await api.delete(`/ratings/${productId}`);
+                        userRating = null;
+                        renderUserRatingStars(userRating);
+                        showToast('Rating removed', 'info');
+                    } else {
+                        // 3. Update rating (PUT)
+                        await api.put('/ratings/', {
+                            product_id: productId,
+                            rating: clickedValue
+                        });
+                        userRating = clickedValue;
+                        renderUserRatingStars(userRating);
+                        showToast(`Rating updated to ${clickedValue} star${clickedValue > 1 ? 's' : ''}!`, 'success');
+                    }
+                    
+                    // Refresh product stats and summary
+                    await refreshProductRatingStats(productId);
+                } catch (err) {
+                    console.error('Rating action failed:', err);
+                    showToast(err.message || 'Failed to update rating', 'error');
+                } finally {
+                    isRatingBusy = false;
+                }
+            });
+        });
+        
+        userRatingWidget.addEventListener('mouseleave', () => {
+            starBtns.forEach(b => b.classList.remove('hovered'));
+        });
+    }
+    
+    async function refreshProductRatingStats(id) {
+        try {
+            const updated = await api.get(`/products/${id}`);
+            if (updated && updated.product_info) {
+                currentProduct = updated.product_info;
+                const starsEl = document.getElementById('prod-stars');
+                if (starsEl) starsEl.innerHTML = generateStarRatingHTML(currentProduct.avg_rating || 0);
+                const ratingValEl = document.getElementById('prod-rating-val');
+                if (ratingValEl) ratingValEl.textContent = (currentProduct.avg_rating || 0).toFixed(1);
+                const reviewsEl = document.getElementById('prod-reviews');
+                if (reviewsEl) reviewsEl.textContent = (currentProduct.rating_count || 0).toLocaleString();
+                
+                updateRatingSummary(currentProduct.avg_rating || 0, currentProduct.rating_count || 0);
+            }
+        } catch (err) {
+            console.error('Failed to refresh product rating stats:', err);
+        }
+    }
+    
+    // Comments logic
+    async function loadComments() {
+        const countEl = document.getElementById('comments-count');
+        const listEl = document.getElementById('comments-list');
+        if (!listEl) return;
+        
+        try {
+            const comments = await api.get(`/ratings/comment/product-${productId}`);
+            const items = Array.isArray(comments) ? comments : [];
+            if (countEl) countEl.textContent = items.length;
+            
+            if (items.length === 0) {
+                listEl.innerHTML = `
+                    <div class="comments-empty-state">
+                        <div style="font-size: 2rem; margin-bottom: var(--spacing-xs);">💬</div>
+                        <p style="margin: 0; font-weight: 500; color: var(--color-text);">No comments yet</p>
+                        <span style="font-size: 0.85rem; color: var(--color-text-secondary);">Be the first to share your thoughts about this product!</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            listEl.innerHTML = '';
+            // Display newest comments first
+            const sorted = [...items].reverse();
+            sorted.forEach(c => {
+                const card = createCommentElement(c);
+                listEl.appendChild(card);
+            });
+        } catch (err) {
+            console.error('Failed to load comments:', err);
+            listEl.innerHTML = '<div class="comments-empty-state">Could not load comments.</div>';
+        }
+    }
+    
+    function createCommentElement(comment) {
+        const isYou = currentUser && (currentUser.id === comment.user_id);
+        const isAdminUser = currentUser && (currentUser.is_admin || currentUser.role === 'admin');
+        const canDelete = isYou || isAdminUser;
+        
+        const card = document.createElement('div');
+        card.className = 'comment-card';
+        card.id = `comment-${comment.id}`;
+        
+        const header = document.createElement('div');
+        header.className = 'comment-card-header';
+        
+        const authorInfo = document.createElement('div');
+        authorInfo.className = 'comment-author-info';
+        
+        const avatar = document.createElement('div');
+        avatar.className = 'comment-avatar';
+        const initial = isYou && currentUser.name ? currentUser.name[0].toUpperCase() : 'U';
+        avatar.textContent = initial;
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'comment-author-name';
+        nameSpan.textContent = isYou ? (currentUser.name || 'You') : `User #${comment.user_id}`;
+        
+        authorInfo.appendChild(avatar);
+        authorInfo.appendChild(nameSpan);
+        
+        if (isYou) {
+            const badge = document.createElement('span');
+            badge.className = 'comment-you-badge';
+            badge.textContent = 'You';
+            authorInfo.appendChild(badge);
+        }
+        
+        header.appendChild(authorInfo);
+        
+        if (canDelete) {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button';
+            deleteBtn.className = 'comment-delete-btn';
+            deleteBtn.title = 'Delete comment';
+            deleteBtn.innerHTML = '🗑️ Delete';
+            deleteBtn.addEventListener('click', async () => {
+                if (!confirm('Are you sure you want to delete this comment?')) return;
+                try {
+                    deleteBtn.disabled = true;
+                    await api.delete(`/ratings/comment/${comment.id}`);
+                    showToast('Comment deleted', 'info');
+                    await loadComments();
+                } catch (err) {
+                    console.error('Failed to delete comment:', err);
+                    showToast(err.message || 'Failed to delete comment', 'error');
+                    deleteBtn.disabled = false;
+                }
+            });
+            header.appendChild(deleteBtn);
+        }
+        
+        const body = document.createElement('div');
+        body.className = 'comment-body';
+        body.textContent = comment.comment;
+        
+        card.appendChild(header);
+        card.appendChild(body);
+        return card;
+    }
+    
+    if (commentForm) {
+        commentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!isLoggedIn()) {
+                showToast('Please log in to post a comment', 'info');
+                return;
+            }
+            const text = (commentInput?.value || '').trim();
+            if (!text) {
+                showToast('Please enter a comment', 'warning');
+                return;
+            }
+            
+            try {
+                if (btnSubmitComment) {
+                    btnSubmitComment.disabled = true;
+                    btnSubmitComment.textContent = 'Posting...';
+                }
+                await api.post('/ratings/comment', {
+                    product_id: productId,
+                    comment: text
+                });
+                if (commentInput) commentInput.value = '';
+                showToast('Comment posted successfully!', 'success');
+                await loadComments();
+            } catch (err) {
+                console.error('Failed to post comment:', err);
+                showToast(err.message || 'Failed to post comment', 'error');
+            } finally {
+                if (btnSubmitComment) {
+                    btnSubmitComment.disabled = false;
+                    btnSubmitComment.textContent = 'Post Comment';
+                }
+            }
+        });
+    }
+    
+    // Load initial comments
+    await loadComments();
 }

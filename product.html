@@ -78,6 +78,46 @@
         
         .similar-products { display: flex; gap: var(--spacing-lg); overflow-x: auto; padding-bottom: var(--spacing-lg); scroll-snap-type: x mandatory; }
         .similar-products .product-card { flex: 0 0 280px; scroll-snap-align: start; }
+
+        /* Reviews & Comments Section */
+        .reviews-layout { display: grid; grid-template-columns: 300px 1fr; gap: var(--spacing-2xl); align-items: start; }
+        @media (max-width: 820px) { .reviews-layout { grid-template-columns: 1fr; gap: var(--spacing-xl); } }
+        
+        .reviews-summary-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--spacing-xl); text-align: center; }
+        .overall-rating { display: flex; flex-direction: column; align-items: center; }
+        .rating-big-number { font-size: 3.5rem; font-weight: 700; line-height: 1; color: var(--color-text); margin-bottom: var(--spacing-xs); }
+        .rating-stars-large { font-size: 1.6rem; color: var(--color-accent); margin-bottom: var(--spacing-xs); }
+        .rating-count-text { color: var(--color-text-secondary); font-size: 0.9rem; }
+        
+        .reviews-divider { border: none; border-top: 1px solid var(--color-border); margin: var(--spacing-lg) 0; }
+        
+        .user-rating-box { display: flex; flex-direction: column; align-items: center; }
+        .user-rating-box h4 { margin: 0 0 var(--spacing-xs) 0; font-size: 1.05rem; color: var(--color-text); }
+        .interactive-stars { display: inline-flex; gap: 4px; margin: var(--spacing-xs) 0; }
+        .interactive-stars .star-btn { background: none; border: none; font-size: 2rem; line-height: 1; cursor: pointer; color: var(--color-text-muted); padding: 2px 4px; transition: color 0.15s ease, transform 0.15s ease; border-radius: var(--radius-sm); }
+        .interactive-stars .star-btn:hover { transform: scale(1.2); }
+        .interactive-stars .star-btn.active,
+        .interactive-stars .star-btn.hovered { color: var(--color-accent); }
+        .user-rating-status { font-size: 0.85rem; color: var(--color-text-secondary); min-height: 1.25rem; margin-top: 4px; }
+        
+        .auth-prompt-card { background: var(--color-bg); border: 1px dashed var(--color-border); border-radius: var(--radius-md); padding: var(--spacing-md); text-align: center; width: 100%; box-sizing: border-box; color: var(--color-text-secondary); margin-top: var(--spacing-sm); }
+        
+        .add-comment-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--spacing-xl); margin-bottom: var(--spacing-xl); }
+        .comment-textarea { width: 100%; min-height: 100px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text); padding: var(--spacing-md); font-family: inherit; font-size: 0.95rem; resize: vertical; box-sizing: border-box; transition: border-color 0.2s; }
+        .comment-textarea:focus { outline: none; border-color: var(--color-primary); background: var(--color-surface); }
+        
+        .comments-list { display: flex; flex-direction: column; gap: var(--spacing-md); }
+        .comment-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--spacing-lg); transition: border-color 0.2s ease; }
+        .comment-card:hover { border-color: var(--color-border-hover); }
+        .comment-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-xs); }
+        .comment-author-info { display: flex; align-items: center; gap: var(--spacing-sm); }
+        .comment-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem; flex-shrink: 0; }
+        .comment-author-name { font-weight: 600; font-size: 0.95rem; color: var(--color-text); }
+        .comment-you-badge { background: var(--color-primary); color: #fff; font-size: 0.7rem; font-weight: 600; padding: 2px 7px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .comment-delete-btn { background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 6px 10px; border-radius: var(--radius-sm); font-size: 0.85rem; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 4px; }
+        .comment-delete-btn:hover { color: var(--color-error); background: var(--color-error-light); }
+        .comment-body { color: var(--color-text); font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+        .comments-empty-state { text-align: center; padding: var(--spacing-2xl); color: var(--color-text-secondary); background: var(--color-surface); border: 1px dashed var(--color-border); border-radius: var(--radius-md); }
     </style>
 </head>
 <body>
@@ -192,10 +232,76 @@
             <div class="similar-products" id="similar-products-container" style="margin-bottom: var(--spacing-3xl);">
                 <!-- Product cards injected here -->
             </div>
+            
+            <h2 class="section-header" id="reviews-heading">Customer Ratings &amp; Reviews</h2>
+            <section id="reviews" class="reviews-section" style="margin-bottom: var(--spacing-4xl);">
+                <div class="reviews-layout">
+                    <!-- Left: Summary & Interactive Rating -->
+                    <div class="reviews-summary-card">
+                        <div class="overall-rating">
+                            <div class="rating-big-number" id="review-avg-number">0.0</div>
+                            <div class="rating-stars-large" id="review-avg-stars">
+                                <span class="star star--empty">☆</span><span class="star star--empty">☆</span><span class="star star--empty">☆</span><span class="star star--empty">☆</span><span class="star star--empty">☆</span>
+                            </div>
+                            <div class="rating-count-text" id="review-total-count">Based on 0 ratings</div>
+                        </div>
+
+                        <hr class="reviews-divider">
+
+                        <div class="user-rating-box">
+                            <h4>Your Rating</h4>
+                            
+                            <!-- Star interactive widget -->
+                            <div id="user-rating-widget" class="interactive-stars" role="radiogroup" aria-label="Rate this product">
+                                <button type="button" class="star-btn" data-value="1" title="1 star - Terrible" aria-label="1 star">★</button>
+                                <button type="button" class="star-btn" data-value="2" title="2 stars - Poor" aria-label="2 stars">★</button>
+                                <button type="button" class="star-btn" data-value="3" title="3 stars - Average" aria-label="3 stars">★</button>
+                                <button type="button" class="star-btn" data-value="4" title="4 stars - Good" aria-label="4 stars">★</button>
+                                <button type="button" class="star-btn" data-value="5" title="5 stars - Excellent" aria-label="5 stars">★</button>
+                            </div>
+                            <div class="user-rating-status" id="user-rating-status">Click a star to rate</div>
+                            
+                            <div id="rating-login-prompt" style="display: none;" class="auth-prompt-card">
+                                <p style="margin: 0; font-size: 0.9rem;">Please <a href="/login.html" class="text-link" id="rating-login-link">log in</a> to rate this product.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Comment Form & Comments List -->
+                    <div class="comments-section-wrapper">
+                        <!-- Add Comment Box -->
+                        <div class="add-comment-card">
+                            <h3 style="margin-top: 0; margin-bottom: var(--spacing-sm); font-size: 1.15rem;">Leave a Comment</h3>
+                            
+                            <form id="comment-form">
+                                <div class="form-group" style="margin-bottom: var(--spacing-sm);">
+                                    <textarea id="comment-input" class="comment-textarea" placeholder="Share your experience or ask a question about this product..." rows="3" required></textarea>
+                                </div>
+                                <div style="display: flex; justify-content: flex-end; align-items: center; gap: var(--spacing-md);">
+                                    <button type="submit" id="btn-submit-comment" class="btn btn-primary btn-sm">Post Comment</button>
+                                </div>
+                            </form>
+
+                            <div id="comment-login-prompt" style="display: none;" class="auth-prompt-card">
+                                <p style="margin: 0; font-size: 0.9rem;">Please <a href="/login.html" class="text-link" id="comment-login-link">log in</a> to post a comment.</p>
+                            </div>
+                        </div>
+
+                        <!-- Comments List -->
+                        <div class="comments-list-header" style="margin-top: var(--spacing-xl); margin-bottom: var(--spacing-md); display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="margin: 0; font-size: 1.2rem;">Comments (<span id="comments-count">0</span>)</h3>
+                        </div>
+                        
+                        <div id="comments-list" class="comments-list">
+                            <!-- Comments injected here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
     </main>
     
     <footer id="app-footer"></footer>
-    <script type="module" src="/js/pages/product.js?v=2.2"></script>
+    <script type="module" src="/js/pages/product.js?v=2.3"></script>
 </body>
 </html>
