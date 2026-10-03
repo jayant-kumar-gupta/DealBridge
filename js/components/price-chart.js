@@ -200,6 +200,10 @@ export function renderPriceChart(canvasId, priceHistory, options = {}) {
   });
 
   canvas._plottedData = plottedData;
+  if (!options._skipHoverCheck) {
+    canvas._currentPriceHistory = priceHistory;
+    canvas._currentOptions = options;
+  }
 
   // Initialize hover listeners once
   if (!canvas._chartHoverAttached && !options._skipHoverCheck) {
@@ -222,15 +226,18 @@ export function renderPriceChart(canvasId, priceHistory, options = {}) {
         }
       }
 
+      const activeHistory = canvas._currentPriceHistory || priceHistory;
+      const activeOptions = canvas._currentOptions || options;
+
       if (nearest) {
         canvas.style.cursor = 'pointer';
-        renderPriceChart(canvasId, priceHistory, { ...options, _skipHoverCheck: true });
+        renderPriceChart(canvasId, activeHistory, { ...activeOptions, _skipHoverCheck: true });
         drawTooltip(canvas, nearest);
       } else {
         canvas.style.cursor = 'default';
         if (canvas._hasTooltip) {
           canvas._hasTooltip = false;
-          renderPriceChart(canvasId, priceHistory, { ...options, _skipHoverCheck: true });
+          renderPriceChart(canvasId, activeHistory, { ...activeOptions, _skipHoverCheck: true });
         }
       }
     });
@@ -239,7 +246,9 @@ export function renderPriceChart(canvasId, priceHistory, options = {}) {
       canvas.style.cursor = 'default';
       if (canvas._hasTooltip) {
         canvas._hasTooltip = false;
-        renderPriceChart(canvasId, priceHistory, { ...options, _skipHoverCheck: true });
+        const activeHistory = canvas._currentPriceHistory || priceHistory;
+        const activeOptions = canvas._currentOptions || options;
+        renderPriceChart(canvasId, activeHistory, { ...activeOptions, _skipHoverCheck: true });
       }
     });
   }

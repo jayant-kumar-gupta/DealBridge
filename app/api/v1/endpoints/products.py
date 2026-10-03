@@ -36,7 +36,6 @@ def get_products_by_id(session: SessionDep, id: int,):
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No products found with that id!")
 
-    partnerprices = product.partnerprices
     specs = product.specs
     tags = product.tags
     price_history = product.price_history
@@ -44,7 +43,7 @@ def get_products_by_id(session: SessionDep, id: int,):
     return {
         "product_info": product,
         "specs": specs,
-        "partner_prices": partnerprices,
+        "partner_prices": None,
         "tags": tags,
         "price_history": price_history,
     }

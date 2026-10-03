@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         populateProductDetails(productDetail, categoryName);
         setupGallery(productDetail);
         setupActions();
-        populateComparisonTable(productDetail, partnerMap);
         setupPriceChart(productDetail, partnerMap);
         populateSimilarProducts(currentProduct.category_id);
     } catch (error) {
@@ -96,33 +95,16 @@ function populateProductDetails(productDetail, categoryName) {
     const descEl = document.getElementById('prod-desc');
     if (descEl) descEl.textContent = p.description || p.short_describe || '';
     
-    // Availability based on partner stock
+    // Availability
     const availEl = document.getElementById('prod-availability');
     if (availEl) {
-        const partnerPrices = productDetail.partner_prices || [];
-        const totalStock = partnerPrices.reduce((sum, pp) => sum + (pp.stock_count || 0), 0);
-        if (partnerPrices.length > 0 && totalStock === 0) {
-            availEl.textContent = 'Out of Stock';
-            availEl.className = 'availability out-of-stock';
-        } else if (totalStock > 0 && totalStock <= 5) {
-            availEl.textContent = 'Low Stock';
-            availEl.className = 'availability low_stock';
-        } else {
-            availEl.textContent = 'In Stock';
-            availEl.className = 'availability';
-        }
+        availEl.textContent = p.our_deal ? 'In Stock' : 'Out of Stock';
+        availEl.className = p.our_deal ? 'availability' : 'availability out-of-stock';
     }
     
     // Pricing
     const ourPrice = p.our_deal || 0;
-    const partnerPrices = (productDetail.partner_prices || []).map(pp => pp.partner_price);
-    const minPartnerPrice = partnerPrices.length > 0 ? Math.min(...partnerPrices) : null;
-    const maxPartnerPrice = partnerPrices.length > 0 ? Math.max(...partnerPrices) : null;
-    
-    const originalPrice = maxPartnerPrice && maxPartnerPrice > ourPrice 
-        ? maxPartnerPrice 
-        : (minPartnerPrice && minPartnerPrice > ourPrice ? minPartnerPrice : (ourPrice ? ourPrice * 1.1 : ourPrice));
-    
+    const originalPrice = ourPrice ? Math.round(ourPrice * 50 / 49) : 0;
     const discountPercent = originalPrice > ourPrice 
         ? Math.round(((originalPrice - ourPrice) / originalPrice) * 100) 
         : 0;
@@ -146,8 +128,8 @@ function populateProductDetails(productDetail, categoryName) {
     
     const prodSavingsEl = document.getElementById('prod-savings');
     if (prodSavingsEl) {
-        if (minPartnerPrice && minPartnerPrice > ourPrice) {
-            const savings = minPartnerPrice - ourPrice;
+        if (originalPrice > ourPrice) {
+            const savings = originalPrice - ourPrice;
             prodSavingsEl.textContent = `You save ${formatPrice(savings)} by choosing DealBridge`;
             prodSavingsEl.style.display = 'block';
         } else {
@@ -261,56 +243,7 @@ function setupActions() {
     }
 }
 
-function populateComparisonTable(productDetail, partnerMap) {
-    const tbody = document.getElementById('comparison-tbody');
-    if (!tbody) return;
-    
-    const p = productDetail.product_info;
-    const partnerPrices = productDetail.partner_prices || [];
-    
-    if (partnerPrices.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--color-text-secondary); padding: var(--spacing-lg);">No partner comparisons available for this product.</td></tr>`;
-        return;
-    }
-    
-    const sortedPrices = [...partnerPrices].sort((a, b) => a.partner_price - b.partner_price);
-    
-    tbody.innerHTML = sortedPrices.map((pp, i) => {
-        const partner = partnerMap.get(pp.partner_id) || { name: 'Partner', badge_color: '#1d8ba0' };
-        const name = partner.name || 'Partner';
-        const color = partner.badge_color || '#1d8ba0';
-        const price = pp.partner_price;
-        const savings = price - (p.our_deal || 0);
-        const isBest = i === 0;
-        
-        return `
-            <tr class="${isBest ? 'best-deal' : ''}">
-                <td>
-                    <div style="display: flex; align-items: center; gap: var(--spacing-sm);">
-                        <div style="width:24px; height:24px; border-radius:50%; background:${color}; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold; flex-shrink:0;">
-                            ${name.charAt(0)}
-                        </div>
-                        <span style="font-weight:500;">${name}</span>
-                        ${isBest ? '<span style="background:var(--color-deal); color:#fff; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; margin-left:8px;">BEST DEAL</span>' : ''}
-                    </div>
-                </td>
-                <td style="font-weight:500;">${formatPrice(price)}</td>
-                <td style="font-weight:700; color:var(--color-primary);">${formatPrice(p.our_deal || 0)}</td>
-                <td style="color:var(--color-deal); font-weight:600;">${savings > 0 ? formatPrice(savings) : '₹0'}</td>
-                <td>
-                    <button class="btn btn-outline btn-sm add-cart-partner" data-id="${p.id}" data-partner="${name}">Buy via DealBridge</button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-    
-    tbody.querySelectorAll('.add-cart-partner').forEach(btn => {
-        btn.addEventListener('click', () => {
-            addToCart(p.id, 1);
-            showToast(`Added to cart`, 'success');
-        });
-    });
-}
+
 
 function setupPriceChart(productDetail, partnerMap) {
     const chartContainer = document.querySelector('.price-chart-container');
