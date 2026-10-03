@@ -2,7 +2,7 @@ import { initHeader } from '../components/header.js';
 import { initFooter } from '../components/footer.js';
 import { api } from '../utils/api.js';
 import { formatPrice, generateStarRatingHTML } from '../utils/helpers.js';
-import { renderPriceChart, filterPriceHistory } from '../components/price-chart.js';
+import { renderPriceChart, filterPriceHistory } from '../components/price-chart.js?v=2.2';
 import { renderProductCard } from '../components/product-card.js';
 import { addToCart } from '../state/cart.js';
 import { toggleWishlist, isInWishlist } from '../state/wishlist.js';
