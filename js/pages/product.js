@@ -1,7 +1,7 @@
 import { initHeader } from '../components/header.js';
 import { initFooter } from '../components/footer.js';
 import { api } from '../utils/api.js';
-import { formatPrice, generateStarRatingHTML } from '../utils/helpers.js';
+import { formatPrice, generateStarRatingHTML, formatDate } from '../utils/helpers.js';
 import { renderPriceChart, filterPriceHistory } from '../components/price-chart.js?v=2.2';
 import { renderProductCard } from '../components/product-card.js';
 import { addToCart } from '../state/cart.js';
@@ -586,6 +586,24 @@ async function setupRatingsAndReviews(productId) {
         }
     }
     
+    const userNamesCache = new Map();
+
+    async function resolveUserName(userId, fallbackName) {
+        if (fallbackName && !fallbackName.startsWith('User #')) return fallbackName;
+        if (!userId) return fallbackName || 'Anonymous';
+        if (userNamesCache.has(userId)) return userNamesCache.get(userId);
+        try {
+            const userData = await api.get(`/login/${userId}`);
+            const name = userData.name || [userData.firstname, userData.lastname].filter(Boolean).join(' ') || userData.email?.split('@')[0] || `User #${userId}`;
+            userNamesCache.set(userId, name);
+            return name;
+        } catch {
+            const fallback = fallbackName || `User #${userId}`;
+            userNamesCache.set(userId, fallback);
+            return fallback;
+        }
+    }
+
     function createCommentElement(comment) {
         const isYou = currentUser && (currentUser.id === comment.user_id);
         const isAdminUser = currentUser && (currentUser.is_admin || currentUser.role === 'admin');
@@ -601,14 +619,23 @@ async function setupRatingsAndReviews(productId) {
         const authorInfo = document.createElement('div');
         authorInfo.className = 'comment-author-info';
         
+        let initialName = comment.user_name || (isYou && currentUser?.name ? currentUser.name : null) || `User #${comment.user_id}`;
+        
         const avatar = document.createElement('div');
         avatar.className = 'comment-avatar';
-        const initial = isYou && currentUser.name ? currentUser.name[0].toUpperCase() : 'U';
-        avatar.textContent = initial;
+        avatar.textContent = initialName && initialName !== 'User #' ? initialName[0].toUpperCase() : 'U';
         
         const nameSpan = document.createElement('span');
         nameSpan.className = 'comment-author-name';
-        nameSpan.textContent = isYou ? (currentUser.name || 'You') : `User #${comment.user_id}`;
+        nameSpan.textContent = initialName;
+        
+        // If initialName is still generic User #ID, resolve it asynchronously
+        if (initialName.startsWith('User #') && comment.user_id) {
+            resolveUserName(comment.user_id, initialName).then(resolved => {
+                nameSpan.textContent = resolved;
+                avatar.textContent = resolved[0].toUpperCase();
+            });
+        }
         
         authorInfo.appendChild(avatar);
         authorInfo.appendChild(nameSpan);
@@ -618,6 +645,14 @@ async function setupRatingsAndReviews(productId) {
             badge.className = 'comment-you-badge';
             badge.textContent = 'You';
             authorInfo.appendChild(badge);
+        }
+
+        if (comment.date) {
+            const dateSpan = document.createElement('span');
+            dateSpan.className = 'comment-date';
+            dateSpan.style.cssText = 'font-size: 0.8rem; color: var(--color-text-secondary); margin-left: var(--spacing-xs);';
+            dateSpan.textContent = `• ${formatDate(comment.date)}`;
+            authorInfo.appendChild(dateSpan);
         }
         
         header.appendChild(authorInfo);

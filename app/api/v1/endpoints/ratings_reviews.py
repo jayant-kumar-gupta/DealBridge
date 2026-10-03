@@ -128,9 +128,26 @@ def delete_rating(product_id: int, session: SessionDep, current_user: User = Dep
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
+def build_comment_read(comment: ProductComment, session: SessionDep, user: User | None = None) -> CommentRead:
+    if not user and comment.user_id:
+        user = session.get(User, comment.user_id)
+    user_name = None
+    if user:
+        user_name = f"{user.firstname or ''} {user.lastname or ''}".strip()
+        if not user_name:
+            user_name = user.email.split("@")[0] if user.email else f"User #{user.id}"
+    return CommentRead(
+        id=comment.id,
+        product_id=comment.product_id,
+        user_id=comment.user_id,
+        comment=comment.comment,
+        user_name=user_name,
+        date=comment.date,
+    )
+
 # Create Comment
 @router.post("/comment", status_code=status.HTTP_201_CREATED, response_model=CommentRead)
-def create_comment(comment_detail: CommentCreate, session: SessionDep, current_user: User = Depends(get_current_user)) -> ProductComment:
+def create_comment(comment_detail: CommentCreate, session: SessionDep, current_user: User = Depends(get_current_user)) -> CommentRead:
     product = session.get(Product, comment_detail.product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
@@ -143,43 +160,43 @@ def create_comment(comment_detail: CommentCreate, session: SessionDep, current_u
     session.add(comment)
     session.commit()
     session.refresh(comment)
-    return comment
+    return build_comment_read(comment, session, current_user)
 
 # Read Comments By User ID (Not generally used)
 @router.get("/comment", response_model=List[CommentRead])
-def get_comments_by_user_id(session: SessionDep, current_user: User = Depends(get_current_user)) -> List[ProductComment]:
+def get_comments_by_user_id(session: SessionDep, current_user: User = Depends(get_current_user)) -> List[CommentRead]:
     comments = session.exec(select(ProductComment).where(ProductComment.user_id == current_user.id)).all()
     if not comments:
         return []
-    return list(comments)
+    return [build_comment_read(c, session, current_user) for c in comments]
 
 # Read Comments By Prouduct ID
 @router.get("/comment/product-{id}", response_model=List[CommentRead])
-def get_comments_by_product_id(id: int, session: SessionDep) -> List[ProductComment]:
+def get_comments_by_product_id(id: int, session: SessionDep) -> List[CommentRead]:
     comments = session.exec(select(ProductComment).where(ProductComment.product_id == id)).all()
     if not comments:
         return []
-    return list(comments)
+    return [build_comment_read(c, session) for c in comments]
 
 # Read Comments of one user done in one product
 @router.get("/comment/{product_id}", response_model=List[CommentRead])
-def get_comments(product_id: int, session: SessionDep, current_user: User = Depends(get_current_user)) -> List[ProductComment]:
+def get_comments(product_id: int, session: SessionDep, current_user: User = Depends(get_current_user)) -> List[CommentRead]:
     comments = session.exec(select(ProductComment).where(ProductComment.user_id == current_user.id, ProductComment.product_id == product_id)).all()
     if not comments:
         return []
-    return list(comments)
+    return [build_comment_read(c, session, current_user) for c in comments]
 
 # Read Comment By commentID
 @router.get("/comment/{id}", response_model=CommentRead)
-def get_comment_by_id(id: int, session: SessionDep, current_user: User = Depends(get_current_user)) -> ProductComment:
+def get_comment_by_id(id: int, session: SessionDep, current_user: User = Depends(get_current_user)) -> CommentRead:
     comment = session.get(ProductComment, id)
     if not comment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No comment found with that id!")
-    return comment
+    return build_comment_read(comment, session)
 
 # Edit comment by comment ID
 @router.put("/comment/{id}", response_model=CommentRead)
-def update_comment(id: int, comment_detail: CommentUpdate, session: SessionDep, current_user: User = Depends(get_current_user)) -> ProductComment:
+def update_comment(id: int, comment_detail: CommentUpdate, session: SessionDep, current_user: User = Depends(get_current_user)) -> CommentRead:
     comment = session.get(ProductComment, id)
     if not comment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found!")
@@ -191,7 +208,7 @@ def update_comment(id: int, comment_detail: CommentUpdate, session: SessionDep, 
     session.add(comment)
     session.commit()
     session.refresh(comment)
-    return comment
+    return build_comment_read(comment, session, current_user)
 
 # Delete Comment By CommentID
 @router.delete("/comment/{id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from datetime import datetime
 
 class RatingSchema(BaseModel):
     product_id: int
@@ -17,5 +18,7 @@ class CommentUpdate(BaseModel):
 class CommentRead(CommentBase):
     id: int
     user_id: int
+    user_name: str | None = None
+    date: datetime | None = None
 
     
