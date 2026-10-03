@@ -63,6 +63,11 @@
         .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md); }
         .chart-toggles button { background: none; border: 1px solid var(--color-border); padding: 4px 12px; border-radius: 16px; cursor: pointer; margin-left: var(--spacing-xs); }
         .chart-toggles button.active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+        .chart-legend { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); justify-content: center; margin-top: var(--spacing-md); }
+        .chart-legend-btn { display: inline-flex; align-items: center; gap: 8px; background: var(--color-surface); border: 1px solid var(--color-border); padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; user-select: none; }
+        .chart-legend-btn:hover { border-color: var(--color-primary); }
+        .chart-legend-btn.disabled { opacity: 0.35; text-decoration: line-through; background: var(--color-bg); }
+        .chart-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
         .chart-stats { display: flex; gap: var(--spacing-xl); margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--color-border); }
         .stat-item { flex: 1; }
         .stat-label { font-size: 0.85rem; color: var(--color-text-secondary); display: block; margin-bottom: 4px; }
@@ -167,14 +172,17 @@
             <div class="price-chart-container" style="margin-bottom: var(--spacing-3xl);">
                 <div class="chart-header">
                     <h3 style="margin: 0;">Price Trend</h3>
-                    <div class="chart-toggles">
-                        <button class="active">All Time</button>
+                    <div class="chart-toggles" id="chart-toggles">
+                        <button type="button" class="chart-toggle-btn active" data-range="1m">1M</button>
+                        <button type="button" class="chart-toggle-btn" data-range="6m">6M</button>
+                        <button type="button" class="chart-toggle-btn" data-range="1y">1Y</button>
                     </div>
                 </div>
                 <canvas id="priceChart" style="width: 100%; height: 300px;"></canvas>
+                <div id="chart-legend" class="chart-legend"></div>
                 <div class="chart-stats">
                     <div class="stat-item">
-                        <span class="stat-label">Current Price</span>
+                        <span class="stat-label">Current Lowest</span>
                         <span class="stat-value" id="stat-current" style="color: var(--color-primary);">₹0</span>
                     </div>
                     <div class="stat-item">

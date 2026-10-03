@@ -2,7 +2,7 @@ import { initHeader } from '../components/header.js';
 import { initFooter } from '../components/footer.js';
 import { api } from '../utils/api.js';
 import { formatPrice, generateStarRatingHTML } from '../utils/helpers.js';
-import { renderPriceChart } from '../components/price-chart.js';
+import { renderPriceChart, filterPriceHistory } from '../components/price-chart.js';
 import { renderProductCard } from '../components/product-card.js';
 import { addToCart } from '../state/cart.js';
 import { toggleWishlist, isInWishlist } from '../state/wishlist.js';
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupGallery(productDetail);
         setupActions();
         populateComparisonTable(productDetail, partnerMap);
-        setupPriceChart(productDetail);
+        setupPriceChart(productDetail, partnerMap);
         populateSimilarProducts(currentProduct.category_id);
     } catch (error) {
         console.error('Failed to load product details:', error);
@@ -312,7 +312,7 @@ function populateComparisonTable(productDetail, partnerMap) {
     });
 }
 
-function setupPriceChart(productDetail) {
+function setupPriceChart(productDetail, partnerMap) {
     const chartContainer = document.querySelector('.price-chart-container');
     const priceHistory = productDetail.price_history || [];
     
@@ -326,20 +326,98 @@ function setupPriceChart(productDetail) {
     }
     
     if (chartContainer) chartContainer.style.display = 'block';
-    
-    const sortedHistory = [...priceHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
-    
-    renderPriceChart('priceChart', sortedHistory);
-    
-    const prices = sortedHistory.map(item => item.price);
-    const p = productDetail.product_info;
-    const statCurrent = document.getElementById('stat-current');
-    const statHigh = document.getElementById('stat-high');
-    const statLow = document.getElementById('stat-low');
-    
-    if (statCurrent) statCurrent.textContent = formatPrice(p.our_deal || prices[prices.length - 1]);
-    if (statHigh) statHigh.textContent = formatPrice(Math.max(...prices));
-    if (statLow) statLow.textContent = formatPrice(Math.min(...prices));
+
+    const partnerIds = Array.from(new Set(priceHistory.map(p => p.partner_id)));
+    const visiblePartnerIds = new Set(partnerIds);
+    let currentRange = '1m';
+
+    // Render interactive legend below graph
+    const legendContainer = document.getElementById('chart-legend');
+    if (legendContainer) {
+        legendContainer.innerHTML = '';
+        partnerIds.forEach(partnerId => {
+            const partner = partnerMap ? partnerMap.get(partnerId) : null;
+            const name = partner ? partner.name : `Partner #${partnerId}`;
+            const color = partner && partner.badge_color ? partner.badge_color : '#1d8ba0';
+
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'chart-legend-btn';
+            btn.dataset.partnerId = partnerId;
+            btn.setAttribute('aria-label', `Toggle ${name}`);
+            btn.innerHTML = `
+                <span class="chart-legend-dot" style="background-color: ${color};"></span>
+                <span class="chart-legend-label">${name}</span>
+            `;
+
+            btn.addEventListener('click', () => {
+                if (visiblePartnerIds.has(partnerId)) {
+                    if (visiblePartnerIds.size > 1) {
+                        visiblePartnerIds.delete(partnerId);
+                        btn.classList.add('disabled');
+                    } else {
+                        showToast('At least one partner must remain visible', 'info');
+                        return;
+                    }
+                } else {
+                    visiblePartnerIds.add(partnerId);
+                    btn.classList.remove('disabled');
+                }
+                renderCurrentChart();
+            });
+
+            legendContainer.appendChild(btn);
+        });
+    }
+
+    // Wire range buttons (1M, 6M, 1Y)
+    const toggleBtns = document.querySelectorAll('.chart-toggle-btn');
+    toggleBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            toggleBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentRange = btn.dataset.range || '1m';
+            renderCurrentChart();
+        });
+    });
+
+    function renderCurrentChart() {
+        const filteredHistory = filterPriceHistory(priceHistory, currentRange);
+
+        renderPriceChart('priceChart', filteredHistory, {
+            partnerMap,
+            visiblePartnerIds,
+            range: currentRange,
+        });
+
+        // Update summary stats based on active points
+        const activePoints = filteredHistory.filter(p => visiblePartnerIds.has(p.partner_id));
+        const statCurrent = document.getElementById('stat-current');
+        const statHigh = document.getElementById('stat-high');
+        const statLow = document.getElementById('stat-low');
+
+        if (activePoints.length > 0) {
+            const prices = activePoints.map(p => p.price);
+            const sorted = [...activePoints].sort((a, b) => new Date(b.date) - new Date(a.date));
+            const latestDate = sorted[0].date;
+            const latestPrices = sorted.filter(p => p.date === latestDate).map(p => p.price);
+            const currentVal = Math.min(...latestPrices);
+
+            if (statCurrent) statCurrent.textContent = formatPrice(currentVal);
+            if (statHigh) statHigh.textContent = formatPrice(Math.max(...prices));
+            if (statLow) statLow.textContent = formatPrice(Math.min(...prices));
+        } else {
+            if (statCurrent) statCurrent.textContent = '₹0';
+            if (statHigh) statHigh.textContent = '₹0';
+            if (statLow) statLow.textContent = '₹0';
+        }
+    }
+
+    renderCurrentChart();
+
+    window.addEventListener('resize', () => {
+        renderCurrentChart();
+    });
 }
 
 async function populateSimilarProducts(categoryId) {
