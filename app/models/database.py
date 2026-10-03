@@ -123,6 +123,7 @@ class ProductPriceHistory(SQLModel, table = True):
         primary_key=True,
     )
     date: datetime = Field(primary_key=True)
+    partner_id: int = Field(foreign_key="partner.id", ondelete="CASCADE", primary_key=True)
     price: float
 
     product: "Product" = Relationship(back_populates="price_history")
