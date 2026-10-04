@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkout — DealBridge</title>
     <meta name="description" content="Complete your purchase on DealBridge.">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <link rel="icon" href="/assets/images/logo.jpg" type="image/jpeg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,29 +19,75 @@
     <link rel="stylesheet" href="/css/pages.css">
     <link rel="stylesheet" href="/css/responsive.css">
     <style>
-        .step-indicator { display: flex; justify-content: space-between; position: relative; margin-bottom: var(--space-2xl); }
-        .step-indicator::before { content: ''; position: absolute; top: 15px; left: 0; right: 0; height: 2px; background: var(--color-border); z-index: 1; }
-        .step { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; background: var(--color-bg); padding: 0 10px; }
+        .step-indicator { display: flex; justify-content: space-between; position: relative; margin-bottom: var(--space-2xl); max-width: 600px; margin-left: auto; margin-right: auto; }
+        .step-indicator::before { content: ''; position: absolute; top: 15px; left: 40px; right: 40px; height: 2px; background: var(--color-border); z-index: 1; }
+        .step { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; background: var(--color-bg); padding: 0 16px; }
         .step-circle { width: 32px; height: 32px; border-radius: 50%; background: var(--color-border); color: var(--color-text-secondary); display: flex; align-items: center; justify-content: center; font-weight: 600; margin-bottom: 8px; transition: all 0.3s; }
         .step.active .step-circle { background: var(--color-primary); color: white; }
-        .step.completed .step-circle { background: var(--color-success); color: white; }
+        .step.completed .step-circle { background: var(--color-success, #10b981); color: white; }
         .step-label { font-size: 0.85rem; font-weight: 500; color: var(--color-text-secondary); }
-        .step.active .step-label { color: var(--color-primary); }
+        .step.active .step-label { color: var(--color-primary); font-weight: 600; }
         
         .checkout-section { display: none; }
         .checkout-section.active { display: block; animation: fadeIn 0.4s ease; }
         
-        .address-card { border: 2px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); cursor: pointer; transition: all 0.2s; position: relative; }
-        .address-card:hover { border-color: var(--color-primary-light); }
+        .address-card { border: 2px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); cursor: pointer; transition: all 0.2s; position: relative; background: var(--color-surface); }
+        .address-card:hover { border-color: var(--color-primary); }
         .address-card input[type="radio"] { position: absolute; opacity: 0; }
-        .address-card.selected { border-color: var(--color-primary); background-color: var(--color-primary-light); }
+        .address-card.selected { border-color: var(--color-primary); background-color: rgba(29, 139, 160, 0.08); }
         
-        .payment-method-card { border: 2px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); cursor: pointer; margin-bottom: var(--space-sm); display: flex; align-items: center; gap: var(--space-md); }
-        .payment-method-card:hover { border-color: var(--color-primary-light); }
-        .payment-method-card input[type="radio"] { margin: 0; }
-        .payment-method-card.selected { border-color: var(--color-primary); background-color: var(--color-primary-light); }
+        .payment-method-card { border: 2px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); cursor: pointer; margin-bottom: var(--space-sm); display: flex; align-items: center; gap: var(--space-md); background: var(--color-surface); }
+        .payment-method-card:hover { border-color: var(--color-primary); }
+        .payment-method-card input[type="radio"] { width: 18px; height: 18px; margin: 0; accent-color: var(--color-primary); flex: 0 0 auto; }
+        .payment-method-card.selected { border-color: var(--color-primary); background-color: rgba(29, 139, 160, 0.08); }
         .payment-details { display: none; margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border); width: 100%; }
         .payment-method-card.selected .payment-details { display: block; }
+        .payment-details .form-group { margin-bottom: var(--space-md); }
+        .payment-details .form-label { display: block; margin-bottom: var(--space-xs); color: var(--color-text); font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); }
+        .payment-details .form-control { width: 100%; min-height: 44px; padding: 0 var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text); font: inherit; transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast); }
+        .payment-details .form-control::placeholder { color: var(--color-text-muted); opacity: 1; }
+        .payment-details .form-control:hover { border-color: var(--color-border-hover); }
+        .payment-details .form-control:focus { border-color: var(--color-primary); outline: none; box-shadow: 0 0 0 3px var(--color-primary-light); }
+        .payment-details select.form-control { cursor: pointer; }
+
+        .checkout-section {
+            padding: var(--space-xl);
+        }
+
+        .checkout-section h2 {
+            margin-bottom: var(--space-lg);
+        }
+
+        #address-list {
+            gap: var(--space-lg);
+            margin-bottom: var(--space-lg);
+        }
+
+        #address-list .address-card {
+            min-height: 150px;
+        }
+
+        #btn-add-address {
+            margin-bottom: var(--space-xl);
+        }
+
+        .checkout-section > .flex {
+            gap: var(--space-md);
+            margin-top: var(--space-xl);
+        }
+
+        .checkout-section .flex.justify-between {
+            flex-wrap: wrap;
+        }
+
+        .payment-methods {
+            gap: var(--space-md);
+            margin-bottom: var(--space-xl);
+        }
+
+        .payment-method-card {
+            margin-bottom: 0;
+        }
     </style>
 </head>
 <body>
@@ -48,23 +97,15 @@
             <div class="step-indicator">
                 <div class="step active" id="indicator-1">
                     <div class="step-circle">1</div>
-                    <span class="step-label">Address</span>
+                    <span class="step-label">Delivery Address</span>
                 </div>
                 <div class="step" id="indicator-2">
                     <div class="step-circle">2</div>
-                    <span class="step-label">Summary</span>
+                    <span class="step-label">Order Review</span>
                 </div>
                 <div class="step" id="indicator-3">
                     <div class="step-circle">3</div>
-                    <span class="step-label">Promo</span>
-                </div>
-                <div class="step" id="indicator-4">
-                    <div class="step-circle">4</div>
                     <span class="step-label">Payment</span>
-                </div>
-                <div class="step" id="indicator-5">
-                    <div class="step-circle">5</div>
-                    <span class="step-label">Done</span>
                 </div>
             </div>
 
@@ -80,41 +121,24 @@
                         </div>
                         <button id="btn-add-address" class="btn btn-secondary mb-xl">+ Add New Address</button>
                         <div class="flex justify-end">
-                            <button id="btn-continue-1" class="btn btn-primary btn-lg">Continue to Summary</button>
+                            <button id="btn-continue-1" class="btn btn-primary btn-lg">Continue to Order Review →</button>
                         </div>
                     </section>
 
-                    <!-- Step 2: Order Summary -->
+                    <!-- Step 2: Order Review -->
                     <section id="step-2" class="checkout-section card p-xl">
-                        <h2 class="h3 mb-lg">Order Summary</h2>
+                        <h2 class="h3 mb-lg">Order Review</h2>
                         <div id="checkout-items-list" class="mb-xl">
                             <!-- Items injected via JS -->
                         </div>
                         <div class="flex justify-between align-center">
-                            <button class="btn btn-ghost btn-back" data-target="1">Back</button>
-                            <button id="btn-continue-2" class="btn btn-primary btn-lg">Continue to Promo Code</button>
+                            <button class="btn btn-ghost btn-back" data-target="1">← Back to Address</button>
+                            <button id="btn-continue-2" class="btn btn-primary btn-lg">Continue to Payment →</button>
                         </div>
                     </section>
 
-                    <!-- Step 3: Promo Code -->
+                    <!-- Step 3: Payment -->
                     <section id="step-3" class="checkout-section card p-xl">
-                        <h2 class="h3 mb-lg">Apply Promo Code</h2>
-                        <div class="flex gap-sm mb-xl">
-                            <input type="text" id="promo-input" class="form-control" placeholder="Enter code here" style="flex: 1;">
-                            <button id="btn-apply-promo" class="btn btn-secondary">Apply</button>
-                        </div>
-                        <h3 class="h5 mb-md">Available Promo Codes</h3>
-                        <div id="available-promos" class="mb-xl">
-                            <!-- Promos injected via JS -->
-                        </div>
-                        <div class="flex justify-between align-center">
-                            <button class="btn btn-ghost btn-back" data-target="2">Back</button>
-                            <button id="btn-continue-3" class="btn btn-primary btn-lg">Continue to Payment</button>
-                        </div>
-                    </section>
-
-                    <!-- Step 4: Payment -->
-                    <section id="step-4" class="checkout-section card p-xl">
                         <h2 class="h3 mb-lg">Select Payment Method</h2>
                         <div class="payment-methods mb-xl">
                             
@@ -169,9 +193,14 @@
                                     </div>
                                 </div>
                             </label>
+
+                            <label class="payment-method-card flex-wrap">
+                                <input type="radio" name="payment" value="cod">
+                                <span class="h5 m-0" style="flex: 1;">Cash on Delivery (COD)</span>
+                            </label>
                         </div>
                         <div class="flex justify-between align-center">
-                            <button class="btn btn-ghost btn-back" data-target="3">Back</button>
+                            <button class="btn btn-ghost btn-back" data-target="2">← Back to Review</button>
                             <button id="btn-pay" class="btn btn-primary btn-lg">Pay Now</button>
                         </div>
                     </section>
@@ -190,13 +219,9 @@
                             <span>Product Savings</span>
                             <span id="summary-savings">-₹0</span>
                         </div>
-                        <div id="promo-discount-row" class="summary-row flex justify-between mb-sm" style="color: var(--color-success); display: none;">
-                            <span>Promo Discount</span>
-                            <span id="summary-promo-discount">-₹0</span>
-                        </div>
                         <div class="summary-row flex justify-between mt-md pt-md border-top font-bold h4">
                             <span>Total to Pay</span>
-                            <span id="summary-total">₹0</span>
+                            <span id="summary-total" style="color: var(--color-deal);">₹0</span>
                         </div>
                     </div>
                 </div>
@@ -204,6 +229,6 @@
         </div>
     </main>
     <footer id="app-footer"></footer>
-    <script type="module" src="/js/pages/checkout.js"></script>
+    <script type="module" src="/js/pages/checkout.js?v=2.1"></script>
 </body>
 </html>

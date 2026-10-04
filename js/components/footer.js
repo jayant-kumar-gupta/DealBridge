@@ -41,7 +41,6 @@ export function initFooter() {
               <li><a href="/cart.html">Shopping Cart</a></li>
               <li><a href="/orders.html">My Orders</a></li>
               <li><a href="/wishlist.html">Wishlist</a></li>
-              <li><a href="/promo-codes.html">Promo Codes</a></li>
             </ul>
           </div>
           
@@ -50,7 +49,6 @@ export function initFooter() {
             <ul>
               <li><a href="/profile.html">My Account</a></li>
               <li><a href="/addresses.html">Saved Addresses</a></li>
-              <li><a href="/notifications.html">Notifications</a></li>
               <li><a href="/login.html">Login</a></li>
               <li><a href="/register.html">Create Account</a></li>
             </ul>

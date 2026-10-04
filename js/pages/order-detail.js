@@ -1,12 +1,11 @@
 import { initHeader } from '../components/header.js';
 import { initFooter } from '../components/footer.js';
 import { isLoggedIn, logout } from '../state/auth.js';
-import { getOrderById } from '../data/orders.js';
-import { products } from '../data/products.js';
-import { formatPrice } from '../utils/helpers.js';
+import { api } from '../utils/api.js';
+import { formatPrice, formatDate, copyToClipboard } from '../utils/helpers.js';
 import { showToast } from '../components/toast.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initHeader();
     initFooter();
 
@@ -29,58 +28,117 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = document.getElementById('order-container');
 
     if (!orderId) {
-        container.innerHTML = '<div class="alert alert--error">Order ID not found.</div>';
+        container.innerHTML = '<div class="alert alert--error">Order ID not specified. <a href="/orders.html">Back to Orders</a></div>';
         return;
     }
 
-    const order = getOrderById(orderId);
-    if (!order) {
-        container.innerHTML = '<div class="alert alert--error">Order not found.</div>';
-        return;
-    }
+    await loadOrder(orderId);
+});
 
-    let timelineHtml = '<ul class="timeline" id="order-timeline">';
-    if (order.timeline) {
-        order.timeline.forEach((step, index) => {
-            timelineHtml += `
-                <li class="timeline-step ${step.completed ? 'completed' : ''}" data-index="${index}">
-                    <div class="timeline-indicator"></div>
-                    <div class="timeline-content">
-                        <div class="timeline-title">${step.status}</div>
-                        <div class="timeline-date">${step.date}</div>
-                    </div>
-                </li>
-            `;
-        });
-    }
-    timelineHtml += '</ul>';
-    
-    // Support advancing timeline for demo
-    timelineHtml += `<button class="btn btn--outline btn--sm" id="simulate-btn" style="margin-top: var(--spacing-sm);">Simulate Status Change</button>`;
+async function loadOrder(orderId) {
+    const container = document.getElementById('order-container');
+    container.innerHTML = '<p class="text-secondary" style="padding: 2rem; text-align: center;">Loading order details...</p>';
 
-    let itemsHtml = '<div style="margin-top: var(--spacing-lg);"><h3>Items</h3><div style="margin-top: var(--spacing-md); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden;">';
-    order.items.forEach(item => {
-        const product = products.find(p => p.id === item.productId);
-        itemsHtml += `
-            <div style="display: flex; gap: var(--spacing-md); padding: var(--spacing-md); border-bottom: 1px solid var(--color-border);">
-                <img src="${product ? product.images[0] : '/assets/images/products/product-1.jpg'}" alt="${product ? product.name : 'Product'}" style="width: 80px; height: 80px; object-fit: cover; border-radius: var(--radius-sm);">
-                <div style="flex: 1;">
-                    <div style="font-weight: 600;">${product ? product.name : 'Product'}</div>
-                    <div style="color: var(--color-text-secondary); font-size: 0.9rem;">Qty: ${item.quantity}</div>
+    try {
+        const data = await api.get(`/orders/${orderId}`);
+        if (!data || !data.order_detail) {
+            container.innerHTML = '<div class="alert alert--error">Order not found. <a href="/orders.html">Back to Orders</a></div>';
+            return;
+        }
+
+        renderOrderDetail(data);
+    } catch (err) {
+        console.error('Failed to load order:', err);
+        container.innerHTML = `<div class="alert alert--error">${err.message || 'Failed to load order details.'} <a href="/orders.html">Back to Orders</a></div>`;
+    }
+}
+
+function renderOrderDetail(data) {
+    const container = document.getElementById('order-container');
+    const { order_detail, address, order_items } = data;
+    const status = order_detail.status || 'Active';
+    const statusLower = status.toLowerCase();
+    const isCancelled = statusLower === 'cancelled';
+    const isDelivered = statusLower === 'delivered';
+
+    let timelineHtml = `
+        <ul class="timeline" id="order-timeline">
+            <li class="timeline-step completed">
+                <div class="timeline-indicator"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">Order Placed</div>
+                    <div class="timeline-date">${formatDate(order_detail.date)}</div>
                 </div>
-                <div style="font-weight: 600;">${formatPrice(item.price * item.quantity)}</div>
+            </li>
+            <li class="timeline-step completed">
+                <div class="timeline-indicator"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">Payment Confirmed</div>
+                    <div class="timeline-date">Paid Online • ${formatPrice(order_detail.amount_paid)}</div>
+                </div>
+            </li>
+            <li class="timeline-step completed">
+                <div class="timeline-indicator"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">Redemption Token Generated</div>
+                    <div class="timeline-date">Ready to redeem at partner store</div>
+                </div>
+            </li>
+            <li class="timeline-step ${isDelivered ? 'completed' : ''}">
+                <div class="timeline-indicator"></div>
+                <div class="timeline-content">
+                    <div class="timeline-title">Delivered</div>
+                    <div class="timeline-date">${isDelivered ? 'Product delivered' : isCancelled ? 'Order Cancelled' : 'Pending partner fulfillment'}</div>
+                </div>
+            </li>
+        </ul>
+    `;
+
+    // Render items list
+    let itemsHtml = '<div style="margin-top: var(--spacing-lg);"><h3>Items in this Order</h3><div style="margin-top: var(--spacing-md); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden;">';
+    const items = Array.isArray(order_items) ? order_items : [];
+
+    items.forEach(item => {
+        const name = item.product_name || `Product #${item.product_id}`;
+        const image = item.image_path || '/assets/images/placeholder.jpg';
+        const itemTotal = Math.round(Number(item.price) * item.quantity * 100) / 100;
+
+        itemsHtml += `
+            <div style="display: flex; gap: var(--spacing-md); padding: var(--spacing-md); border-bottom: 1px solid var(--color-border); align-items: center; flex-wrap: wrap;">
+                <img src="${image}" alt="${name}" style="width: 70px; height: 70px; object-fit: contain; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-bg);">
+                <div style="flex: 1; min-width: 200px;">
+                    <div style="font-weight: 600; font-size: 1rem;">${name}</div>
+                    <div style="color: var(--color-text-secondary); font-size: 0.9rem;">Qty: ${item.quantity} × ${formatPrice(item.price)}</div>
+                </div>
+                <div style="font-weight: 700; font-size: 1.05rem;">
+                    ${formatPrice(itemTotal)}
+                </div>
             </div>
         `;
     });
     itemsHtml += '</div></div>';
 
+    // Promo code box
     let promoHtml = '';
-    if (order.promoCode) {
+    if (order_detail.promocode) {
         promoHtml = `
             <div class="promo-box">
-                <p style="margin-bottom: var(--spacing-xs); font-weight: 500;">Partner Redemption Code (${order.partnerName})</p>
-                <div class="promo-code-text" id="promo-code">${order.promoCode}</div>
-                <button class="btn btn--primary btn--sm" id="copy-btn" style="margin-top: var(--spacing-md);">Copy Code</button>
+                <p style="margin-bottom: var(--spacing-xs); font-weight: 500;">Partner 100% Off Redemption Code</p>
+                <div class="promo-code-text" id="promo-code">${order_detail.promocode}</div>
+                <button class="promo-copy-button" id="copy-btn">Copy Code</button>
+            </div>
+        `;
+    }
+
+    // Delivery address section
+    let addressHtml = '<p class="text-secondary">No delivery address saved.</p>';
+    if (address) {
+        addressHtml = `
+            <div style="line-height: 1.6; font-size: 0.95rem;">
+                <strong>${address.type || 'Delivery Address'}</strong><br>
+                ${address.address_line1}<br>
+                ${address.address_line2 ? `${address.address_line2}<br>` : ''}
+                ${address.city}, ${address.state} - ${address.pincode}
             </div>
         `;
     }
@@ -89,89 +147,78 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="card" style="margin-bottom: var(--spacing-lg);">
             <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--spacing-md); border-bottom: 1px solid var(--color-border); padding-bottom: var(--spacing-md); margin-bottom: var(--spacing-md);">
                 <div>
-                    <h2 style="margin-bottom: var(--spacing-xs);">Order ${order.id}</h2>
-                    <p style="color: var(--color-text-secondary);">Placed on ${new Date(order.date).toLocaleDateString()}</p>
+                    <h2 style="margin-bottom: var(--spacing-xs);">Order #${order_detail.id}</h2>
+                    <p style="color: var(--color-text-secondary); margin: 0;">Placed on ${formatDate(order_detail.date)}</p>
                 </div>
                 <div style="text-align: right;">
-                    <div style="font-size: 1.2rem; font-weight: 700; color: var(--color-primary); margin-bottom: var(--spacing-xs);">${formatPrice(order.total)}</div>
-                    <span style="padding: 4px 12px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; background: var(--color-bg); border: 1px solid var(--color-border); text-transform: uppercase;">
-                        ${order.status}
+                    <div style="font-size: 1.3rem; font-weight: 700; color: var(--color-deal); margin-bottom: var(--spacing-xs);">${formatPrice(order_detail.amount_paid)}</div>
+                    <span class="badge ${isDelivered ? 'badge-status-delivered' : isCancelled ? 'badge-status-cancelled' : 'badge-status-active'}">
+                        ${status.toUpperCase()}
                     </span>
                 </div>
             </div>
             
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--spacing-xl);">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--spacing-xl); margin-bottom: var(--spacing-lg);">
                 <div>
                     <h3>Order Status</h3>
                     ${timelineHtml}
                 </div>
                 <div>
-                    <h3>Payment Details</h3>
-                    <div style="background: var(--color-bg); padding: var(--spacing-md); border-radius: var(--radius-md); margin-top: var(--spacing-md);">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: var(--spacing-xs);">
-                            <span style="color: var(--color-text-secondary);">Subtotal</span>
-                            <span>${formatPrice(order.subtotal)}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: var(--spacing-xs); color: var(--color-deal);">
-                            <span>Discount</span>
-                            <span>-${formatPrice(order.discount)}</span>
-                        </div>
-                        <hr style="border: none; border-top: 1px solid var(--color-border); margin: var(--spacing-sm) 0;">
-                        <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.1rem;">
-                            <span>Total</span>
-                            <span>${formatPrice(order.total)}</span>
-                        </div>
-                        <div style="margin-top: var(--spacing-md); font-size: 0.9rem;">
-                            <span style="color: var(--color-text-secondary);">Paid via:</span> ${order.paymentMethod}
-                        </div>
+                    <h3>Delivery Address</h3>
+                    <div style="background: var(--color-bg); padding: var(--spacing-md); border-radius: var(--radius-md); margin-top: var(--spacing-md); border: 1px solid var(--color-border);">
+                        ${addressHtml}
                     </div>
-                    
+
                     ${promoHtml}
                 </div>
             </div>
             
             ${itemsHtml}
+
+            ${statusLower === 'active' ? `
+                <div style="margin-top: var(--spacing-xl); padding-top: var(--spacing-md); border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end;">
+                    <button id="btn-cancel-order" class="btn btn--outline" style="color: var(--color-error); border-color: var(--color-error);">
+                        Cancel Order
+                    </button>
+                </div>
+            ` : ''}
         </div>
     `;
 
+    // Handle copy code button
     const copyBtn = document.getElementById('copy-btn');
-    if (copyBtn) {
+    if (copyBtn && order_detail.promocode) {
         copyBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(order.promoCode);
-            showToast('Promo code copied to clipboard!', 'success');
+            copyToClipboard(order_detail.promocode);
+            showToast('Redemption code copied to clipboard!', 'success');
             copyBtn.textContent = 'Copied!';
-            setTimeout(() => copyBtn.textContent = 'Copy Code', 2000);
+            setTimeout(() => { copyBtn.textContent = 'Copy Code'; }, 2000);
         });
     }
 
-    const simulateBtn = document.getElementById('simulate-btn');
-    if (simulateBtn && order.timeline) {
-        simulateBtn.addEventListener('click', () => {
-            const pendingStepIndex = order.timeline.findIndex(s => !s.completed);
-            if (pendingStepIndex !== -1) {
-                order.timeline[pendingStepIndex].completed = true;
-                order.timeline[pendingStepIndex].date = new Date().toLocaleString();
-                
-                const stepEl = document.querySelector(`.timeline-step[data-index="${pendingStepIndex}"]`);
-                if (stepEl) {
-                    stepEl.classList.add('completed');
-                    stepEl.querySelector('.timeline-date').textContent = order.timeline[pendingStepIndex].date;
-                }
-                
-                if (pendingStepIndex === order.timeline.length - 1) {
-                    order.status = 'delivered';
-                    showToast('Order delivered!', 'success');
-                    simulateBtn.style.display = 'none';
-                    // Update header status
-                    const statusBadge = document.querySelector('span[style*="uppercase"]');
-                    if (statusBadge) statusBadge.textContent = 'delivered';
-                } else {
-                    showToast(`Status updated to: ${order.timeline[pendingStepIndex].status}`, 'success');
-                }
-            } else {
-                showToast('All steps completed', 'info');
-                simulateBtn.style.display = 'none';
+    // Handle cancel order button
+    const cancelBtn = document.getElementById('btn-cancel-order');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', async () => {
+            if (!confirm(`Are you sure you want to cancel Order #${order_detail.id}? This will restore stock to the partner inventory.`)) {
+                return;
+            }
+
+            cancelBtn.disabled = true;
+            cancelBtn.textContent = 'Cancelling...';
+
+            try {
+                await api.delete(`/orders/${order_detail.id}`);
+                showToast('Order cancelled successfully.', 'success');
+                setTimeout(() => {
+                    window.location.href = '/orders.html';
+                }, 1000);
+            } catch (err) {
+                console.error('Failed to cancel order:', err);
+                showToast(err.message || 'Failed to cancel order.', 'error');
+                cancelBtn.disabled = false;
+                cancelBtn.textContent = 'Cancel Order';
             }
         });
     }
-});
+}

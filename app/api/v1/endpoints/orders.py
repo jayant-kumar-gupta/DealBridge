@@ -2,7 +2,7 @@ from fastapi import APIRouter, status, HTTPException, Response, Depends
 from typing import List
 from app.core.database import SessionDep
 from sqlmodel import select
-from app.models.database import User, Order, Address, PartnerPrice, Cart, OrderItem
+from app.models.database import User, Order, Address, PartnerPrice, Cart, OrderItem, Product
 from app.schemas.orders import OrderCreate, OrderRead
 from app.core.utils import get_current_user
 import secrets
@@ -40,6 +40,7 @@ def create_order(order_detail: OrderCreate, session: SessionDep, current_user: U
     
     order = Order(
         user_id=current_user.id,
+        address_id=address.id,
         amount_paid=order_detail.amount_paid,
         promocode=secret_token(),
     )
@@ -78,16 +79,58 @@ def create_order(order_detail: OrderCreate, session: SessionDep, current_user: U
     return {"order_detail": order, "address": address, "order_items": order.items}
 
 # Read Order
-@router.get("/", response_model=OrderRead)
+@router.get("/")
 def read_orders(session: SessionDep, current_user: User = Depends(get_current_user)):
-    order = session.exec(select(Order).where(Order.user_id == current_user.id)).first()
+    orders = session.exec(select(Order).where(Order.user_id == current_user.id)).all()
+
+    if not orders:
+        return []
+
+    response = []
+    for order in orders:
+        address = session.exec(select(Address).where(Address.user_id == current_user.id, Address.id == order.address_id)).first()
+        item_data = []
+        for item in order.items:
+            product = session.get(Product, item.product_id)
+            item_data.append({
+                "id": item.id,
+                "order_id": item.order_id,
+                "product_id": item.product_id,
+                "quantity": item.quantity,
+                "partner_id": item.partner_id,
+                "price": item.price,
+                "product_name": product.name,
+                "image_path": product.image_path,
+            })
+        response.append({"order_detail": order, "address": address, "order_items": item_data})
+    
+    return response
+
+# Read Order By Order ID
+@router.get("/{id}")
+def read_order_by_id(id: int, session: SessionDep, current_user: User = Depends(get_current_user)):
+    order = session.exec(select(Order).where(Order.user_id == current_user.id, Order.id == id)).first()
 
     if not order:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order detail not found")
-
-    address = session.exec(select(Address).where(Address.user_id == current_user.id, Address.isdefault == True)).first()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order detail not found!")
     
-    return {"order_detail": order, "address": address, "order_items": order.items}
+    address = session.get(Address, order.address_id)
+
+    item_data = []
+    for item in order.items:
+        product = session.get(Product, item.product_id)
+        item_data.append({
+            "id": item.id,
+            "order_id": item.order_id,
+            "product_id": item.product_id,
+            "quantity": item.quantity,
+            "partner_id": item.partner_id,
+            "price": item.price,
+            "product_name": product.name,
+            "image_path": product.image_path,
+        })
+    
+    return {"order_detail": order, "address": address, "order_items": item_data}
 
 # Update method for order? How is a user allowed to update the order once order is done? That's why not implemented.
 

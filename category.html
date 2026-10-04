@@ -19,6 +19,7 @@
         .category-hero { padding: var(--spacing-2xl) 0; background: var(--color-primary-light); margin-bottom: var(--spacing-xl); text-align: center; }
         .category-hero .icon { font-size: 3rem; margin-bottom: var(--spacing-sm); }
         .category-hero h1 { margin: 0 0 var(--spacing-xs) 0; color: var(--color-primary-dark); }
+        [data-theme="dark"] .category-hero h1 { color: #ffffff; }
         .category-hero p { margin: 0; color: var(--color-text-secondary); max-width: 600px; margin: 0 auto; }
         
         .layout-sidebar-main { display: grid; grid-template-columns: 250px 1fr; gap: var(--spacing-xl); align-items: start; margin-bottom: var(--spacing-3xl); }
@@ -30,10 +31,10 @@
         .filter-list li { margin-bottom: var(--spacing-xs); }
         .filter-list label { display: flex; align-items: center; gap: var(--spacing-sm); cursor: pointer; }
         .price-inputs { display: flex; gap: var(--spacing-sm); align-items: center; }
-        .price-inputs input { width: 100px; padding: var(--spacing-xs); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+        .price-inputs input { width: 100px; padding: var(--spacing-xs); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text); }
         
         .sort-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg); padding-bottom: var(--spacing-sm); border-bottom: 1px solid var(--color-border); }
-        .sort-select { padding: var(--spacing-xs) var(--spacing-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-family: inherit; }
+        .sort-select { padding: var(--spacing-xs) var(--spacing-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-family: inherit; background: var(--color-surface); color: var(--color-text); }
         
         .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--spacing-lg); }
         
@@ -90,21 +91,6 @@
                         </div>
                     </div>
                     
-                    <div class="filter-section">
-                        <h3>Discount</h3>
-                        <ul class="filter-list">
-                            <li><label><input type="radio" name="discount" value="50"> 50% or more</label></li>
-                            <li><label><input type="radio" name="discount" value="25"> 25% or more</label></li>
-                            <li><label><input type="radio" name="discount" value="10"> 10% or more</label></li>
-                            <li><label><input type="radio" name="discount" value="0" checked> Any discount</label></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="filter-section">
-                        <h3>Partners</h3>
-                        <ul class="filter-list" id="filter-partners"></ul>
-                    </div>
-                    
                     <button type="submit" class="btn btn-primary btn-full" style="margin-top: var(--spacing-md);">Apply Filters</button>
                 </form>
             </aside>
@@ -118,7 +104,6 @@
                             <option value="relevance">Relevance</option>
                             <option value="price-low">Price: Low to High</option>
                             <option value="price-high">Price: High to Low</option>
-                            <option value="discount">Highest Discount</option>
                             <option value="rating">Highest Rated</option>
                         </select>
                     </div>
@@ -131,6 +116,6 @@
         </div>
     </main>
     <footer id="app-footer"></footer>
-    <script type="module" src="/js/pages/category.js"></script>
+    <script type="module" src="/js/pages/category.js?v=2.0"></script>
 </body>
 </html>

@@ -15,7 +15,7 @@ def sync_avg_rating_create(session, product_id: int, rating: int):
     old_avgrating = product.avg_rating
     old_count = product.rating_count
     new_count = old_count + 1
-    new_avgrating = ((old_avgrating * old_count) + rating) / new_count
+    new_avgrating = round(((old_avgrating * old_count) + rating) / new_count, 2)
     product.avg_rating = new_avgrating
     product.rating_count += 1
 
@@ -31,7 +31,7 @@ def sync_avg_rating_update(session, product_id: int, old_rating: int, new_rating
     if count == 0:
         product.avg_rating = float(new_rating)
     else:
-        new_avgrating = ((old_avgrating * count) + new_rating - old_rating) / count
+        new_avgrating = round(((old_avgrating * count) + new_rating - old_rating) / count, 2)
         product.avg_rating = new_avgrating
 
     session.add(product)
@@ -47,7 +47,7 @@ def sync_avg_rating_delete(session, product_id: int, rating: int):
     if new_count == 0:
         product.avg_rating = 0.0
     else:
-        product.avg_rating = ((old_avgrating * old_count) - rating) / new_count
+        product.avg_rating = round(((old_avgrating * old_count) - rating) / new_count, 2)
     product.rating_count = new_count
 
     session.add(product)

@@ -62,6 +62,14 @@ export async function login(usernameOrEmail, password) {
       localStorage.setItem(AUTH_KEY, JSON.stringify(user));
     }
 
+    if (typeof window !== 'undefined' && window.__dealbridgeSyncCart) {
+      try {
+        await window.__dealbridgeSyncCart();
+      } catch (syncErr) {
+        console.warn('Cart sync warning:', syncErr);
+      }
+    }
+
     document.dispatchEvent(new CustomEvent('auth-change', { detail: { user, loggedIn: true } }));
     return { success: true, user };
   } catch (error) {
@@ -81,12 +89,16 @@ export async function register(userData) {
 export function logout() {
   localStorage.removeItem(AUTH_KEY);
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem('dealbridge_cart');
+  document.dispatchEvent(new CustomEvent('cart-change', { detail: { cart: [], count: 0 } }));
   document.dispatchEvent(new CustomEvent('auth-change', { detail: { user: null, loggedIn: false } }));
 }
 
-export function requireAuth(redirectUrl = '/login.html') {
+export function requireAuth(loginUrl = '/login.html') {
   if (!isLoggedIn()) {
-    window.location.href = `${redirectUrl}?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    const destination = (loginUrl && loginUrl.startsWith('/login')) ? loginUrl : '/login.html';
+    const currentPath = window.location.pathname + window.location.search;
+    window.location.href = `${destination}?redirect=${encodeURIComponent(currentPath)}`;
     return false;
   }
   return true;

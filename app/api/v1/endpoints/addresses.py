@@ -58,6 +58,17 @@ def update_address(id: int, detail: AddressCreate, session: SessionDep, current_
     address.state = detail.state
     address.city = detail.city
     address.pincode = detail.pincode
+    
+    if detail.isdefault:
+        existing_default = session.exec(select(Address).where(
+            Address.isdefault == True,
+            Address.id != id, # If a user edits details (e.g., street or pincode) on an address that is already default, querying Address.id != id prevents unnecessary self-modification.
+            Address.user_id == current_user.id
+        )).first()
+        if existing_default:
+            existing_default.isdefault = False
+            session.add(existing_default)
+
     address.isdefault = detail.isdefault
 
     session.add(address)

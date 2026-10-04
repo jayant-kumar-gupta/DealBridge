@@ -141,19 +141,21 @@ class Partner(SQLModel, table = True):
 class Order(SQLModel, table = True):
     id: int | None =  Field(default=None, primary_key=True)
     user_id: int | None = Field(foreign_key="user.id", ondelete="CASCADE")
+    address_id: int = Field(foreign_key="address.id")
     promocode: str = Field()
     amount_paid: float = Field()
     date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
     status: str = Field(default="Active", sa_column_kwargs={"server_default": text("'Active'")})
 
-    items: List["OrderItem"] = Relationship(back_populates="order")
+    items: List["OrderItem"] = Relationship(back_populates="order", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    address: "Address" = Relationship()
 
 class OrderItem(SQLModel, table = True):
     id: int | None = Field(default = None, primary_key=True)
     order_id: int = Field(foreign_key="order.id", ondelete="CASCADE")
     product_id: int = Field(foreign_key="product.id")
-    partner_id: int = Field(foreign_key="partner.id")
     quantity: int = Field(default=1, sa_column_kwargs={"server_default": "1"})
+    partner_id: int = Field(foreign_key="partner.id")
     price: float = Field()
 
     order: "Order" = Relationship(back_populates="items")

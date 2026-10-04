@@ -15,6 +15,43 @@
     <link rel="stylesheet" href="/css/layout.css">
     <link rel="stylesheet" href="/css/pages.css">
     <link rel="stylesheet" href="/css/responsive.css">
+    <style>
+        .orders-tabs {
+            display: flex;
+            gap: var(--spacing-sm);
+            flex-wrap: wrap;
+        }
+
+        .orders-tabs .tab-btn {
+            min-height: 42px;
+            padding: 0 var(--spacing-md);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            background: var(--color-surface);
+            color: var(--color-text-secondary);
+            font: inherit;
+            font-weight: var(--font-weight-semibold);
+            cursor: pointer;
+            transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+        }
+
+        .orders-tabs .tab-btn:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        .orders-tabs .tab-btn.active {
+            border-color: var(--color-primary);
+            background: var(--color-primary);
+            color: #fff;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .orders-tabs .tab-btn.active:hover {
+            background: var(--color-primary-dark);
+            color: #fff;
+        }
+    </style>
 </head>
 <body>
     <header id="app-header"></header>
@@ -26,8 +63,6 @@
                     <li class="sidebar-nav__item"><a href="/orders.html" class="active">📦 Orders</a></li>
                     <li class="sidebar-nav__item"><a href="/wishlist.html">❤️ Wishlist</a></li>
                     <li class="sidebar-nav__item"><a href="/addresses.html">📍 Addresses</a></li>
-                    <li class="sidebar-nav__item"><a href="/promo-codes.html">🎟️ Promo Codes</a></li>
-                    <li class="sidebar-nav__item"><a href="/notifications.html">🔔 Notifications</a></li>
                     <li class="sidebar-nav__item"><a href="#" id="logout-btn">🚪 Logout</a></li>
                 </ul>
             </nav>
@@ -35,7 +70,7 @@
         <div class="dashboard-content">
             <h1 style="margin-bottom: var(--spacing-lg);">My Orders</h1>
             
-            <div class="tabs" style="margin-bottom: var(--spacing-lg);">
+            <div class="tabs orders-tabs" style="margin-bottom: var(--spacing-lg);">
                 <button class="tab-btn active" data-tab="all">All Orders</button>
                 <button class="tab-btn" data-tab="active">Active</button>
                 <button class="tab-btn" data-tab="delivered">Delivered</button>

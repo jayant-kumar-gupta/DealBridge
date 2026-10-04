@@ -2,32 +2,31 @@ import { initHeader } from '../components/header.js';
 import { initFooter } from '../components/footer.js';
 import { showToast } from '../components/toast.js';
 import { showModal } from '../components/modal.js';
-import { getCart, getCartTotal, getCartSavings } from '../state/cart.js';
+import { getCart, getCartTotal, getCartSavings, fetchCart, clearCart } from '../state/cart.js?v=2.1';
 import { requireAuth, getCurrentUser } from '../state/auth.js';
-import { getProductById } from '../data/products.js';
-import { getAddressesByUser, getDefaultAddress } from '../data/addresses.js';
-import { availableCheckoutCodes, validateCheckoutCode } from '../data/promo-codes.js';
+import { api } from '../utils/api.js';
 import { formatPrice } from '../utils/helpers.js';
 
 let currentStep = 1;
 let selectedAddressId = null;
-let appliedPromoDiscount = 0;
+let userAddresses = [];
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (!requireAuth('/checkout.html')) return;
-    
-    const cart = getCart();
-    if (cart.length === 0) {
+document.addEventListener('DOMContentLoaded', async () => {
+    if (!requireAuth()) return;
+
+    initHeader();
+    initFooter();
+
+    // Ensure cart is synced with backend
+    const cart = await fetchCart();
+    if (!cart || cart.length === 0) {
         window.location.href = '/cart.html';
         return;
     }
 
-    initHeader();
-    initFooter();
-    
-    initStep1();
     updateSidebarSummary();
     setupNavigationEvents();
+    await loadAddresses();
 });
 
 function goToStep(step) {
@@ -44,29 +43,71 @@ function goToStep(step) {
         }
     });
 
-    document.getElementById(`step-${step}`).classList.add('active');
+    const targetSection = document.getElementById(`step-${step}`);
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
     currentStep = step;
 
+    if (step === 1) renderAddressList();
     if (step === 2) initStep2();
     if (step === 3) initStep3();
-    if (step === 4) initStep4();
 }
 
 function setupNavigationEvents() {
-    document.getElementById('btn-continue-1').addEventListener('click', () => {
+    document.getElementById('btn-continue-1').addEventListener('click', async () => {
         if (!selectedAddressId) {
             showToast('Please select a delivery address', 'error');
             return;
         }
+
+        // Ensure selected address is marked as default in backend
+        const selected = userAddresses.find(a => a.id === selectedAddressId);
+        if (selected && !selected.isdefault) {
+            try {
+                // First unset existing default address in backend
+                const oldDefaults = userAddresses.filter(a => a.id !== selected.id && a.isdefault);
+                for (const old of oldDefaults) {
+                    await api.put(`/addresses/${old.id}`, {
+                        address_line1: old.address_line1,
+                        address_line2: old.address_line2 || null,
+                        city: old.city,
+                        state: old.state,
+                        pincode: Number(old.pincode),
+                        type: old.type || 'Home',
+                        isdefault: false
+                    });
+                    old.isdefault = false;
+                }
+
+                await api.put(`/addresses/${selected.id}`, {
+                    address_line1: selected.address_line1,
+                    address_line2: selected.address_line2 || null,
+                    city: selected.city,
+                    state: selected.state,
+                    pincode: Number(selected.pincode),
+                    type: selected.type || 'Home',
+                    isdefault: true
+                });
+                userAddresses.forEach(a => {
+                    a.isdefault = (a.id === selected.id);
+                });
+            } catch (err) {
+                console.warn('Failed to set address as default:', err);
+            }
+        }
+
         goToStep(2);
     });
 
     document.getElementById('btn-continue-2').addEventListener('click', () => goToStep(3));
-    document.getElementById('btn-continue-3').addEventListener('click', () => goToStep(4));
 
     document.querySelectorAll('.btn-back').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            goToStep(parseInt(e.target.dataset.target));
+            const target = parseInt(e.currentTarget.dataset.target, 10);
+            if (!isNaN(target)) {
+                goToStep(target);
+            }
         });
     });
 
@@ -79,82 +120,160 @@ function setupNavigationEvents() {
             e.target.closest('.payment-method-card').classList.add('selected');
         });
     });
+
+    const addAddressBtn = document.getElementById('btn-add-address');
+    if (addAddressBtn) {
+        addAddressBtn.addEventListener('click', openAddAddressModal);
+    }
 }
 
-function initStep1() {
-    const user = getCurrentUser();
-    const addresses = getAddressesByUser(user.id);
-    const defaultAddr = getDefaultAddress(user.id);
+async function loadAddresses() {
     const addressList = document.getElementById('address-list');
+    addressList.innerHTML = '<p class="text-secondary">Loading saved addresses...</p>';
 
-    if (addresses.length === 0) {
-        addressList.innerHTML = '<p class="text-secondary">No saved addresses found. Please add a new one.</p>';
-    } else {
-        let html = '';
-        addresses.forEach(addr => {
-            const isSelected = (defaultAddr && defaultAddr.id === addr.id) || (!defaultAddr && addr.id === addresses[0].id);
-            if (isSelected) selectedAddressId = addr.id;
-            
-            html += `
-                <label class="address-card ${isSelected ? 'selected' : ''}" data-id="${addr.id}">
-                    <input type="radio" name="address" value="${addr.id}" ${isSelected ? 'checked' : ''}>
-                    <div class="flex justify-between align-center mb-xs">
-                        <strong>${addr.name}</strong>
-                        <span class="badge" style="background: var(--color-bg);">${addr.type}</span>
-                    </div>
-                    <p class="text-sm text-secondary mb-xs">${addr.phone}</p>
-                    <p class="text-sm">${addr.addressLine1}, ${addr.addressLine2 || ''}</p>
-                    <p class="text-sm">${addr.city}, ${addr.state} - ${addr.pincode}</p>
-                </label>
-            `;
-        });
-        addressList.innerHTML = html;
+    try {
+        const data = await api.get('/addresses/');
+        userAddresses = Array.isArray(data) ? data : [];
+        renderAddressList();
+    } catch (err) {
+        console.error('Error fetching addresses:', err);
+        addressList.innerHTML = '<p class="text-error">Failed to load addresses. Please refresh or add a new one.</p>';
+    }
+}
 
-        document.querySelectorAll('.address-card').forEach(card => {
-            card.addEventListener('click', (e) => {
-                document.querySelectorAll('.address-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-                card.querySelector('input').checked = true;
-                selectedAddressId = parseInt(card.dataset.id);
-            });
-        });
+function renderAddressList() {
+    const addressList = document.getElementById('address-list');
+    const user = getCurrentUser() || {};
+    const userName = `${user.firstname || ''} ${user.lastname || ''}`.trim() || 'User';
+    const userPhone = user.phone || '';
+
+    if (userAddresses.length === 0) {
+        addressList.innerHTML = '<p class="text-secondary">No saved addresses found. Please add a new delivery address.</p>';
+        selectedAddressId = null;
+        return;
     }
 
-    document.getElementById('btn-add-address').addEventListener('click', () => {
-        showModal(`
-            <form id="add-address-form">
-                <div class="form-group">
-                    <label class="form-label">Full Name</label>
-                    <input type="text" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Phone Number</label>
-                    <input type="tel" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Address Line 1</label>
-                    <input type="text" class="form-control" required>
-                </div>
-                <div class="grid grid-cols-2 gap-md">
-                    <div class="form-group">
-                        <label class="form-label">City</label>
-                        <input type="text" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Pincode</label>
-                        <input type="text" class="form-control" required>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block mt-md">Save Address</button>
-            </form>
-        `, { title: 'Add New Address' });
+    const defaultAddr = userAddresses.find(a => a.isdefault) || userAddresses[0];
+    const defaultId = defaultAddr ? defaultAddr.id : null;
+    if (!selectedAddressId && defaultAddr) {
+        selectedAddressId = defaultAddr.id;
+    }
 
-        document.getElementById('add-address-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            // In a real app we'd save this, here we just fake it
-            showToast('Address saved successfully!', 'success');
-            document.querySelector('.modal__close').click();
+    let html = '';
+    userAddresses.forEach(addr => {
+        const isSelected = selectedAddressId === addr.id;
+        const isDefault = addr.id === defaultId;
+        html += `
+            <label class="address-card ${isSelected ? 'selected' : ''}" data-id="${addr.id}">
+                <input type="radio" name="address" value="${addr.id}" ${isSelected ? 'checked' : ''}>
+                <div class="flex justify-between align-center mb-xs">
+                    <strong>${userName}</strong>
+                    <div class="flex gap-xs align-center">
+                        <span class="badge" style="background: var(--color-bg);">${addr.type || 'Home'}</span>
+                        ${isDefault ? '<span class="badge" style="background: var(--color-primary-light); color: var(--color-primary-dark);">Default</span>' : ''}
+                    </div>
+                </div>
+                ${userPhone ? `<p class="text-sm text-secondary mb-xs">${userPhone}</p>` : ''}
+                <p class="text-sm">${addr.address_line1}${addr.address_line2 ? `, ${addr.address_line2}` : ''}</p>
+                <p class="text-sm">${addr.city}, ${addr.state} - ${addr.pincode}</p>
+            </label>
+        `;
+    });
+
+    addressList.innerHTML = html;
+
+    addressList.querySelectorAll('.address-card').forEach(card => {
+        card.addEventListener('click', () => {
+            addressList.querySelectorAll('.address-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            const radio = card.querySelector('input[type="radio"]');
+            if (radio) radio.checked = true;
+            selectedAddressId = parseInt(card.dataset.id, 10);
         });
+    });
+}
+
+function openAddAddressModal() {
+    showModal(`
+        <form id="add-address-form" style="display: flex; flex-direction: column; gap: var(--space-md);">
+            <div class="form-group">
+                <label class="form-label">Address Line 1 *</label>
+                <input type="text" id="modal-address1" class="form-control" required placeholder="Flat, House no., Building, Street">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Address Line 2 (Optional)</label>
+                <input type="text" id="modal-address2" class="form-control" placeholder="Area, Landmark, Sector">
+            </div>
+            <div class="grid grid-cols-2 gap-md">
+                <div class="form-group">
+                    <label class="form-label">City *</label>
+                    <input type="text" id="modal-city" class="form-control" required placeholder="City">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">State *</label>
+                    <input type="text" id="modal-state" class="form-control" required placeholder="State">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-md">
+                <div class="form-group">
+                    <label class="form-label">Pincode *</label>
+                    <input type="number" id="modal-pincode" class="form-control" required placeholder="6-digit pincode">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Address Type</label>
+                    <select id="modal-type" class="form-control">
+                        <option value="Home">Home</option>
+                        <option value="Work">Work</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" id="btn-submit-address" class="btn btn-primary btn-block mt-md">Save & Select Address</button>
+        </form>
+    `, { title: 'Add New Delivery Address' });
+
+    const form = document.getElementById('add-address-form');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = document.getElementById('btn-submit-address');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+
+        const address1 = document.getElementById('modal-address1').value.trim();
+        const address2 = document.getElementById('modal-address2').value.trim() || null;
+        const city = document.getElementById('modal-city').value.trim();
+        const state = document.getElementById('modal-state').value.trim();
+        const pincode = parseInt(document.getElementById('modal-pincode').value.trim(), 10);
+        const type = document.getElementById('modal-type').value;
+
+        try {
+            const isFirst = userAddresses.length === 0;
+            const newAddress = await api.post('/addresses/', {
+                address_line1: address1,
+                address_line2: address2,
+                city,
+                state,
+                pincode,
+                type,
+                isdefault: isFirst
+            });
+
+            userAddresses.push(newAddress);
+            selectedAddressId = newAddress.id;
+            renderAddressList();
+
+            const closeBtn = document.querySelector('.modal__close');
+            if (closeBtn) closeBtn.click();
+
+            showToast('Address added successfully!', 'success');
+        } catch (err) {
+            console.error('Failed to create address:', err);
+            showToast(err.message || 'Failed to save address', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Save & Select Address';
+        }
     });
 }
 
@@ -164,16 +283,20 @@ function initStep2() {
     let html = '';
 
     cart.forEach(item => {
-        const product = getProductById(item.productId);
+        const name = item.name || 'Product';
+        const price = item.price ?? item.our_deal ?? 0;
+        const image = item.image_path || item.image || '/assets/images/placeholder.jpg';
+        const totalItemPrice = Math.round(price * item.quantity * 100) / 100;
+
         html += `
             <div class="flex align-center border-bottom pb-md mb-md">
-                <img src="${product.images[0]}" alt="${product.name}" style="width: 60px; height: 60px; object-fit: contain; margin-right: var(--space-md);">
+                <img src="${image}" alt="${name}" style="width: 60px; height: 60px; object-fit: contain; margin-right: var(--space-md); border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
                 <div style="flex: 1;">
-                    <h4 class="h6 m-0">${product.name}</h4>
-                    <span class="text-sm text-secondary">Qty: ${item.quantity}</span>
+                    <h4 class="h6 m-0">${name}</h4>
+                    <span class="text-sm text-secondary">Qty: ${item.quantity} × ${formatPrice(price)}</span>
                 </div>
                 <div class="font-bold">
-                    ${formatPrice(product.ourPrice * item.quantity)}
+                    ${formatPrice(totalItemPrice)}
                 </div>
             </div>
         `;
@@ -182,84 +305,77 @@ function initStep2() {
 }
 
 function initStep3() {
-    const promosContainer = document.getElementById('available-promos');
-    let html = '';
-    availableCheckoutCodes.forEach(promo => {
-        html += `
-            <div class="card p-md mb-sm flex justify-between align-center" style="border: 1px dashed var(--color-border);">
-                <div>
-                    <div class="font-bold" style="color: var(--color-primary); font-family: monospace;">${promo.code}</div>
-                    <div class="text-sm text-secondary">${promo.description}</div>
-                </div>
-                <button class="btn btn-sm btn-secondary btn-apply-card-promo" data-code="${promo.code}">Apply</button>
-            </div>
-        `;
-    });
-    promosContainer.innerHTML = html;
-
-    const applyBtn = document.getElementById('btn-apply-promo');
-    const input = document.getElementById('promo-input');
-
-    const handleApply = (code) => {
-        if (!code) return;
-        const subtotal = getCartTotal();
-        const res = validateCheckoutCode(code, subtotal);
-        if (res.valid) {
-            appliedPromoDiscount = res.discount;
-            updateSidebarSummary();
-            showToast(res.message, 'success');
-            input.value = code;
-        } else {
-            showToast(res.message, 'error');
-        }
-    };
-
-    // Remove old listeners to avoid duplicates
-    const newApplyBtn = applyBtn.cloneNode(true);
-    applyBtn.replaceWith(newApplyBtn);
-    newApplyBtn.addEventListener('click', () => handleApply(input.value.trim()));
-
-    document.querySelectorAll('.btn-apply-card-promo').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            handleApply(e.target.dataset.code);
-        });
-    });
-}
-
-function initStep4() {
-    const totalToPay = getCartTotal() - appliedPromoDiscount;
-    document.getElementById('btn-pay').textContent = `Pay ${formatPrice(totalToPay)}`;
+    const totalToPay = getCartTotal();
+    const btn = document.getElementById('btn-pay');
+    if (btn) {
+        btn.textContent = `Pay ${formatPrice(totalToPay)}`;
+    }
 }
 
 function updateSidebarSummary() {
     const cart = getCart();
     const itemsCount = cart.reduce((sum, i) => sum + i.quantity, 0);
-    const subtotal = getCartTotal();
+    const total = getCartTotal();
     const savings = getCartSavings();
-    const finalTotal = subtotal - appliedPromoDiscount;
 
-    document.getElementById('summary-items-count').textContent = `Items (${itemsCount})`;
-    document.getElementById('summary-subtotal').textContent = formatPrice(subtotal);
-    document.getElementById('summary-savings').textContent = `-${formatPrice(savings)}`;
-    
-    const promoRow = document.getElementById('promo-discount-row');
-    if (appliedPromoDiscount > 0) {
-        promoRow.style.display = 'flex';
-        document.getElementById('summary-promo-discount').textContent = `-${formatPrice(appliedPromoDiscount)}`;
-    } else {
-        promoRow.style.display = 'none';
-    }
+    const countEl = document.getElementById('summary-items-count');
+    const subtotalEl = document.getElementById('summary-subtotal');
+    const savingsEl = document.getElementById('summary-savings');
+    const totalEl = document.getElementById('summary-total');
 
-    document.getElementById('summary-total').textContent = formatPrice(finalTotal);
+    if (countEl) countEl.textContent = `Items (${itemsCount})`;
+    if (subtotalEl) subtotalEl.textContent = formatPrice(total);
+    if (savingsEl) savingsEl.textContent = `-${formatPrice(savings)}`;
+    if (totalEl) totalEl.textContent = formatPrice(total);
 }
 
-function handlePayment() {
+async function handlePayment() {
+    const cart = getCart();
+    if (!cart || cart.length === 0) {
+        showToast('Your cart is empty', 'error');
+        window.location.href = '/cart.html';
+        return;
+    }
+
+    if (!selectedAddressId) {
+        showToast('Please select a delivery address', 'error');
+        goToStep(1);
+        return;
+    }
+
     const btn = document.getElementById('btn-pay');
     btn.disabled = true;
-    btn.textContent = 'Processing...';
+    btn.textContent = 'Processing Payment...';
 
-    setTimeout(() => {
-        // Redirect to confirmation page
-        window.location.href = '/confirmation.html';
-    }, 1500);
+    try {
+        // Compute required total matching backend calculation:
+        // required_amount += round(item.quantity * product.our_deal, 2)
+        const totalAmount = Math.round(cart.reduce((sum, item) => {
+            const price = Number(item.price ?? item.our_deal ?? 0);
+            return sum + Math.round(item.quantity * price * 100) / 100;
+        }, 0) * 100) / 100;
+
+        const orderResult = await api.post('/orders/', {
+            amount_paid: totalAmount
+        });
+
+        // Clear frontend cart now that order is created and backend cart is cleared
+        clearCart();
+
+        showToast('Payment successful! Order placed.', 'success');
+
+        const orderId = orderResult?.order_detail?.id;
+        setTimeout(() => {
+            if (orderId) {
+                window.location.href = `/confirmation.html?id=${orderId}`;
+            } else {
+                window.location.href = '/orders.html';
+            }
+        }, 600);
+    } catch (err) {
+        console.error('Order creation failed:', err);
+        showToast(err.message || 'Payment processing failed. Please try again.', 'error');
+        btn.disabled = false;
+        initStep3();
+    }
 }

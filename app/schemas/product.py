@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from typing import List
 from app.schemas.tag import TagRead
@@ -21,6 +21,13 @@ class ProductRead(ProductBase):
     our_deal: float | None = None
     avg_rating: float
     rating_count: int
+
+    @field_validator("avg_rating", mode="before")
+    @classmethod
+    def round_avg_rating(cls, v):
+        if v is not None:
+            return round(float(v), 2)
+        return 0.0
 
 class PartnerPrice(BaseModel):
     product_id: int

@@ -4,8 +4,8 @@ import { api } from '../utils/api.js';
 import { formatPrice, generateStarRatingHTML, formatDate } from '../utils/helpers.js';
 import { renderPriceChart, filterPriceHistory } from '../components/price-chart.js?v=2.2';
 import { renderProductCard } from '../components/product-card.js';
-import { addToCart } from '../state/cart.js';
-import { toggleWishlist, isInWishlist } from '../state/wishlist.js';
+import { addToCart } from '../state/cart.js?v=2.1';
+import { toggleWishlist, isInWishlist } from '../state/wishlist.js?v=2.0';
 import { isLoggedIn, getCurrentUser } from '../state/auth.js';
 import { showToast } from '../components/toast.js';
 
@@ -214,21 +214,49 @@ function setupActions() {
     
     const addCartBtn = document.getElementById('btn-add-cart');
     if (addCartBtn) {
-        addCartBtn.addEventListener('click', () => {
+        addCartBtn.addEventListener('click', async () => {
             if (!currentProduct) return;
             const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
-            addToCart(currentProduct.id, qty);
+            const unitPrice = currentProduct.our_deal || 0;
+            const origPrice = unitPrice ? Math.round((unitPrice * 50 / 49) * 100) / 100 : 0;
+            await addToCart(currentProduct.id, qty, {
+                name: currentProduct.name,
+                brand: currentProduct.brand,
+                price: unitPrice,
+                ourPrice: unitPrice,
+                our_deal: unitPrice,
+                original_price: origPrice,
+                savings: Math.max(0, origPrice - unitPrice),
+                image: currentProduct.image_path,
+                image_path: currentProduct.image_path,
+            });
             showToast(`Added ${qty} ${currentProduct.name} to cart`, 'success');
         });
     }
     
     const buyNowBtn = document.getElementById('btn-buy-now');
     if (buyNowBtn) {
-        buyNowBtn.addEventListener('click', () => {
+        buyNowBtn.addEventListener('click', async () => {
             if (!currentProduct) return;
             const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
-            addToCart(currentProduct.id, qty);
-            window.location.href = '/checkout.html';
+            const unitPrice = currentProduct.our_deal || 0;
+            const origPrice = unitPrice ? Math.round((unitPrice * 50 / 49) * 100) / 100 : 0;
+            await addToCart(currentProduct.id, qty, {
+                name: currentProduct.name,
+                brand: currentProduct.brand,
+                price: unitPrice,
+                ourPrice: unitPrice,
+                our_deal: unitPrice,
+                original_price: origPrice,
+                savings: Math.max(0, origPrice - unitPrice),
+                image: currentProduct.image_path,
+                image_path: currentProduct.image_path,
+            });
+            if (!isLoggedIn()) {
+                window.location.href = `/login.html?redirect=${encodeURIComponent('/checkout.html')}`;
+            } else {
+                window.location.href = '/checkout.html';
+            }
         });
     }
     

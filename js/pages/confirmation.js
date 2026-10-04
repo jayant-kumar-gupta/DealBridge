@@ -1,84 +1,95 @@
 import { initHeader } from '../components/header.js';
 import { initFooter } from '../components/footer.js';
 import { showToast } from '../components/toast.js';
-import { getCart, getCartTotal, clearCart } from '../state/cart.js';
-import { getProductById } from '../data/products.js';
 import { requireAuth } from '../state/auth.js';
-import { generateOrderId, generatePromoCode, formatPrice, formatDate, copyToClipboard } from '../utils/helpers.js';
+import { clearCart } from '../state/cart.js?v=2.1';
+import { api } from '../utils/api.js';
+import { formatPrice, formatDate, copyToClipboard } from '../utils/helpers.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (!requireAuth('/')) return;
-    
-    // We expect items in the cart to render the confirmation page
-    const cart = getCart();
-    if (cart.length === 0) {
-        // If cart is already empty, they probably refreshed the confirmation page.
-        // In a real app we'd load the order from the DB using a query param.
-        // For this demo, we'll just redirect to home if no cart.
-        const urlParams = new URLSearchParams(window.location.search);
-        if (!urlParams.has('demo')) {
-            window.location.href = '/';
-            return;
-        }
-    }
+document.addEventListener('DOMContentLoaded', async () => {
+    if (!requireAuth()) return;
 
     initHeader();
     initFooter();
-    renderConfirmationData(cart);
+
+    // Ensure cart is cleared locally
+    clearCart();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('id');
+
+    if (!orderId) {
+        window.location.href = '/orders.html';
+        return;
+    }
+
+    await loadOrderDetails(orderId);
 });
 
-function renderConfirmationData(cart) {
-    const orderId = generateOrderId();
-    const date = new Date().toISOString();
-    const amount = getCartTotal();
-    const promoCode = generatePromoCode();
+async function loadOrderDetails(orderId) {
+    try {
+        const data = await api.get(`/orders/${orderId}`);
+        if (!data || !data.order_detail) {
+            showToast('Order details not found.', 'error');
+            setTimeout(() => window.location.href = '/orders.html', 1500);
+            return;
+        }
 
-    document.getElementById('conf-order-id').textContent = orderId;
-    document.getElementById('conf-date').textContent = formatDate(date);
-    document.getElementById('conf-amount').textContent = formatPrice(amount);
-    document.getElementById('conf-promo-code').textContent = promoCode;
+        renderConfirmationData(data);
+    } catch (err) {
+        console.error('Error fetching order confirmation:', err);
+        showToast(err.message || 'Failed to load order confirmation.', 'error');
+        document.getElementById('conf-promo-code').textContent = 'ERROR';
+    }
+}
 
+function renderConfirmationData(data) {
+    const { order_detail, address, order_items } = data;
+
+    const orderIdEl = document.getElementById('conf-order-id');
+    const dateEl = document.getElementById('conf-date');
+    const amountEl = document.getElementById('conf-amount');
+    const promoCodeEl = document.getElementById('conf-promo-code');
+
+    if (orderIdEl) orderIdEl.textContent = `#${order_detail.id}`;
+    if (dateEl) dateEl.textContent = formatDate(order_detail.date);
+    if (amountEl) amountEl.textContent = formatPrice(order_detail.amount_paid);
+    if (promoCodeEl) promoCodeEl.textContent = order_detail.promocode || '---';
+
+    // Render items list
     let itemsHtml = '';
-    cart.forEach(item => {
-        const product = getProductById(item.productId);
-        if (!product) return;
-        
+    const items = Array.isArray(order_items) ? order_items : [];
+
+    items.forEach(item => {
+        const name = item.product_name || `Product #${item.product_id}`;
+        const image = item.image_path || '/assets/images/placeholder.jpg';
+        const itemTotal = Math.round(Number(item.price) * item.quantity * 100) / 100;
+
         itemsHtml += `
             <div class="flex align-center border-bottom pb-sm mb-sm">
-                <img src="${product.images[0]}" alt="${product.name}" style="width: 50px; height: 50px; object-fit: contain; margin-right: var(--space-md); border-radius: var(--radius-sm);">
+                <img src="${image}" alt="${name}" style="width: 50px; height: 50px; object-fit: contain; margin-right: var(--space-md); border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
                 <div style="flex: 1;">
-                    <div class="font-medium">${product.name}</div>
-                    <div class="text-sm text-secondary">Qty: ${item.quantity} | Brand: ${product.brand}</div>
+                    <div class="font-medium">${name}</div>
+                    <div class="text-sm text-secondary">Qty: ${item.quantity} × ${formatPrice(item.price)}</div>
+                </div>
+                <div class="font-bold">
+                    ${formatPrice(itemTotal)}
                 </div>
             </div>
         `;
     });
-    
+
     const itemsList = document.getElementById('conf-items-list');
     if (itemsList) {
-        itemsList.innerHTML = itemsHtml;
+        itemsList.innerHTML = itemsHtml || '<p class="text-secondary">No items found.</p>';
     }
 
     // Handle copy code button
-    document.getElementById('btn-copy-code').addEventListener('click', () => {
-        copyToClipboard(promoCode);
-        showToast('Promo code copied to clipboard!', 'success');
-    });
-
-    // Save order to localStorage (mock backend)
-    const currentUser = JSON.parse(localStorage.getItem('dealbridge_auth'));
-    const orders = JSON.parse(localStorage.getItem('dealbridge_orders') || '[]');
-    orders.push({
-        id: orderId,
-        userId: currentUser ? currentUser.id : 1,
-        date: date,
-        total: amount,
-        status: 'processing',
-        promoCode: promoCode,
-        items: [...cart]
-    });
-    localStorage.setItem('dealbridge_orders', JSON.stringify(orders));
-
-    // Clear the cart now that order is placed
-    clearCart();
+    const copyBtn = document.getElementById('btn-copy-code');
+    if (copyBtn && order_detail.promocode) {
+        copyBtn.addEventListener('click', () => {
+            copyToClipboard(order_detail.promocode);
+            showToast('Redemption code copied to clipboard!', 'success');
+        });
+    }
 }

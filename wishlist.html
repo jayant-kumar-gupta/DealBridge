@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Wishlist — DealBridge</title>
-    <meta name="description" content="View your saved items.">
+    <meta name="description" content="View your saved items and exclusive deals on DealBridge.">
     <link rel="icon" href="/assets/images/logo.jpg" type="image/jpeg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,10 +16,11 @@
     <link rel="stylesheet" href="/css/pages.css">
     <link rel="stylesheet" href="/css/responsive.css">
     <style>
-        .wishlist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--spacing-lg); }
-        .wishlist-card { position: relative; display: flex; flex-direction: column; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; transition: transform 0.2s, box-shadow 0.2s; }
+        .wishlist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--space-lg, var(--spacing-lg)); }
+        .wishlist-card { position: relative; display: flex; flex-direction: column; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .wishlist-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
-        .remove-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--color-error); font-size: 1.2rem; box-shadow: var(--shadow-sm); z-index: 2; }
+        .remove-btn { position: absolute; top: 10px; right: 10px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--color-error); font-size: 1rem; box-shadow: var(--shadow-sm); z-index: 2; transition: transform 0.15s ease, background-color 0.15s ease; }
+        .remove-btn:hover { transform: scale(1.1); background-color: rgba(239, 68, 68, 0.1); }
     </style>
 </head>
 <body>
@@ -32,30 +33,28 @@
                     <li class="sidebar-nav__item"><a href="/orders.html">📦 Orders</a></li>
                     <li class="sidebar-nav__item"><a href="/wishlist.html" class="active">❤️ Wishlist</a></li>
                     <li class="sidebar-nav__item"><a href="/addresses.html">📍 Addresses</a></li>
-                    <li class="sidebar-nav__item"><a href="/promo-codes.html">🎟️ Promo Codes</a></li>
-                    <li class="sidebar-nav__item"><a href="/notifications.html">🔔 Notifications</a></li>
                     <li class="sidebar-nav__item"><a href="#" id="logout-btn">🚪 Logout</a></li>
                 </ul>
             </nav>
         </aside>
         <div class="dashboard-content">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
-                <h1>My Wishlist (<span id="wishlist-count">0</span>)</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
+                <h1 style="margin: 0; font-size: 1.75rem;">My Wishlist (<span id="wishlist-count">0</span>)</h1>
             </div>
             
             <div id="wishlist-grid" class="wishlist-grid">
-                <!-- Populated by JS -->
+                <!-- Populated dynamically by JS -->
             </div>
             
-            <div id="empty-state" class="empty-state" style="display: none; text-align: center; padding: var(--spacing-3xl) 0;">
-                <div style="font-size: 4rem; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">❤️</div>
-                <h3>Your wishlist is empty</h3>
-                <p style="color: var(--color-text-secondary); margin-bottom: var(--spacing-lg);">Save items you like to view them later.</p>
-                <a href="/" class="btn btn--primary">Discover Deals</a>
+            <div id="empty-state" class="empty-state" style="display: none; text-align: center; padding: var(--space-3xl) 0;">
+                <div style="font-size: 4rem; margin-bottom: var(--space-md);">❤️</div>
+                <h3 style="margin-bottom: var(--space-xs); font-size: 1.25rem;">Your wishlist is empty</h3>
+                <p style="color: var(--color-text-secondary); margin-bottom: var(--space-lg);">Save items you like to view and compare them later.</p>
+                <a href="/search.html" class="btn btn-primary btn-lg">Discover Deals</a>
             </div>
         </div>
     </main>
     <footer id="app-footer"></footer>
-    <script type="module" src="/js/pages/wishlist-page.js"></script>
+    <script type="module" src="/js/pages/wishlist-page.js?v=2.0"></script>
 </body>
 </html>

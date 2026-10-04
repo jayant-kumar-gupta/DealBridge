@@ -15,6 +15,142 @@
     <link rel="stylesheet" href="/css/layout.css">
     <link rel="stylesheet" href="/css/pages.css">
     <link rel="stylesheet" href="/css/responsive.css">
+    <style>
+        .address-action-button {
+            min-height: 44px;
+            padding: 0 var(--spacing-md);
+            border: 1px solid var(--color-primary);
+            border-radius: var(--radius-md);
+            font: inherit;
+            font-weight: var(--font-weight-semibold);
+            cursor: pointer;
+            transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+        }
+
+        .address-action-button--primary {
+            background: var(--color-primary);
+            color: #fff;
+        }
+
+        .address-action-button--primary:hover {
+            background: var(--color-primary-dark);
+            border-color: var(--color-primary-dark);
+        }
+
+        .address-action-button--outline {
+            background: #fff;
+            color: #000;
+            border-color: #000;
+        }
+
+        .address-action-button--outline:hover {
+            background: #f1f1f1;
+        }
+
+        [data-theme="dark"] .address-action-button--outline {
+            background: #000;
+            color: #fff;
+            border-color: #fff;
+        }
+
+        [data-theme="dark"] .address-action-button--outline:hover {
+            background: #1f1f1f;
+        }
+
+        .address-card-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-sm);
+            margin-top: auto;
+        }
+
+        .address-card-action {
+            min-height: 36px;
+            padding: 0 var(--spacing-sm);
+            border: 1px solid #000;
+            border-radius: var(--radius-md);
+            background: #fff;
+            color: #000;
+            font: inherit;
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-semibold);
+            cursor: pointer;
+            transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+        }
+
+        .address-card-action:hover {
+            background: #f1f1f1;
+        }
+
+        .address-card-action--delete {
+            border-color: var(--color-error);
+            background: var(--color-error-light);
+            color: var(--color-error);
+        }
+
+        .address-card-action--delete:hover {
+            background: var(--color-error);
+            color: #fff;
+        }
+
+        .address-card-action--default {
+            margin-left: auto;
+        }
+
+        [data-theme="dark"] .address-card-action:not(.address-card-action--delete) {
+            border-color: #fff;
+            background: #000;
+            color: #fff;
+        }
+
+        [data-theme="dark"] .address-card-action:not(.address-card-action--delete):hover {
+            background: #1f1f1f;
+        }
+
+        #address-modal {
+            background: var(--color-surface);
+            color: var(--color-text);
+            box-shadow: var(--shadow-lg);
+        }
+
+        #address-form .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+
+        #address-form label {
+            display: block;
+            margin-bottom: var(--spacing-xs);
+            color: var(--color-text);
+            font-size: var(--font-size-sm);
+            font-weight: var(--font-weight-semibold);
+        }
+
+        #address-form .input {
+            width: 100%;
+            min-height: 44px;
+            padding: 0 var(--spacing-sm);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            background: var(--color-bg);
+            color: var(--color-text);
+            font: inherit;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
+        }
+
+        #address-form .input:hover {
+            border-color: var(--color-border-hover);
+        }
+
+        #address-form .input:focus {
+            border-color: var(--color-primary);
+            outline: none;
+            box-shadow: 0 0 0 3px var(--color-primary-light);
+        }
+
+        #address-form select.input {
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <header id="app-header"></header>
@@ -26,8 +162,6 @@
                     <li class="sidebar-nav__item"><a href="/orders.html">📦 Orders</a></li>
                     <li class="sidebar-nav__item"><a href="/wishlist.html">❤️ Wishlist</a></li>
                     <li class="sidebar-nav__item"><a href="/addresses.html" class="active">📍 Addresses</a></li>
-                    <li class="sidebar-nav__item"><a href="/promo-codes.html">🎟️ Promo Codes</a></li>
-                    <li class="sidebar-nav__item"><a href="/notifications.html">🔔 Notifications</a></li>
                     <li class="sidebar-nav__item"><a href="#" id="logout-btn">🚪 Logout</a></li>
                 </ul>
             </nav>
@@ -35,7 +169,7 @@
         <div class="dashboard-content">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
                 <h1>Saved Addresses</h1>
-                <button class="btn btn--primary" id="add-address-btn">+ Add New Address</button>
+                <button class="address-action-button address-action-button--primary" id="add-address-btn">+ Add New Address</button>
             </div>
             
             <div id="addresses-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--spacing-md);">
@@ -89,8 +223,8 @@
                 </div>
             </div>
             <div style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
-                <button type="submit" class="btn btn--primary" style="flex: 1;">Save</button>
-                <button type="button" class="btn btn--outline" id="close-modal" style="flex: 1;">Cancel</button>
+                <button type="submit" class="address-action-button address-action-button--primary" style="flex: 1;">Save</button>
+                <button type="button" class="address-action-button address-action-button--outline" id="close-modal" style="flex: 1;">Cancel</button>
             </div>
         </form>
     </dialog>

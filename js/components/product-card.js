@@ -1,13 +1,21 @@
 import { formatPrice, generateStarRatingHTML } from '../utils/helpers.js';
-import { addToCart, isInCart } from '../state/cart.js';
-import { toggleWishlist, isInWishlist } from '../state/wishlist.js';
+import { addToCart, isInCart } from '../state/cart.js?v=2.1';
+import { toggleWishlist, isInWishlist } from '../state/wishlist.js?v=2.0';
 import { showToast } from './toast.js';
 
 export function renderProductCard(product) {
-  const originalPrice = product.our_deal? product.our_deal * 50 / 49 : null;
-  const savings = product.our_deal? originalPrice - product.our_deal : null;
+  const ourDeal = product.our_deal ?? product.ourPrice ?? null;
+  const originalPrice = ourDeal ? ourDeal * 50 / 49 : null;
+  const savings = ourDeal ? originalPrice - ourDeal : null;
   const inWishlist = isInWishlist(product.id);
   const inCart = isInCart(product.id);
+  const avgRating = product.avg_rating ?? product.rating ?? 0;
+  const ratingCount = product.rating_count ?? product.reviewCount ?? 0;
+  const formattedRating = avgRating ? Math.round(Number(avgRating) * 100) / 100 : 0;
+  let imagePath = product.image_path || product.image || '/assets/images/placeholder.jpg';
+  if (imagePath && !imagePath.startsWith('/') && !imagePath.startsWith('http')) {
+    imagePath = '/' + imagePath;
+  }
 
   const card = document.createElement('article');
   card.className = 'product-card';
@@ -16,21 +24,21 @@ export function renderProductCard(product) {
       ${inWishlist ? '&#10084;' : '&#9825;'}
     </button>
     <a href="/product.html?id=${product.id}" class="product-card__image">
-      <img src="${product.image_path}" alt="${product.name}" loading="lazy" width="300" height="300">
+      <img src="${imagePath}" alt="${product.name}" loading="lazy" width="300" height="300">
     </a>
     <div class="product-card__body">
       <a href="/product.html?id=${product.id}" class="product-card__name">${product.name}</a>
-      <span class="product-card__brand">${product.brand}</span>
+      <span class="product-card__brand">${product.brand || ''}</span>
       <div class="product-card__rating">
-        <span class="stars">${generateStarRatingHTML(product.avg_rating)}</span>
-        <span>${product.avg_rating}</span>
-        <span class="product-card__review-count">(${product.rating_count.toLocaleString()})</span>
+        <span class="stars">${generateStarRatingHTML(avgRating)}</span>
+        <span>${formattedRating}</span>
+        <span class="product-card__review-count">(${ratingCount.toLocaleString()})</span>
       </div>
-      ${product.our_deal
+      ${ourDeal
       ?
       `<div class="product-card__pricing">
         <span class="product-card__original-price">${formatPrice(originalPrice)}</span>
-        <span class="product-card__price">${formatPrice(product.our_deal)}</span>
+        <span class="product-card__price">${formatPrice(ourDeal)}</span>
         <span class="product-card__savings">Save ${formatPrice(savings)}</span>
         </div>`
       : `<div class="product-card__pricing">
@@ -63,7 +71,19 @@ export function renderProductCard(product) {
     addCartBtn.addEventListener('click', (e) => {
       e.preventDefault();
       if (!isInCart(product.id)) {
-        addToCart(product.id);
+        const unitPrice = product.our_deal || product.ourPrice || 0;
+        const origPrice = unitPrice ? Math.round((unitPrice * 50 / 49) * 100) / 100 : 0;
+        addToCart(product.id, 1, {
+          name: product.name,
+          brand: product.brand,
+          price: unitPrice,
+          ourPrice: unitPrice,
+          our_deal: unitPrice,
+          original_price: origPrice,
+          savings: Math.max(0, origPrice - unitPrice),
+          image: product.image_path,
+          image_path: product.image_path,
+        });
         addCartBtn.innerHTML = '&#10003; In Cart';
         showToast(`${product.name} added to cart`, 'success');
       } else {

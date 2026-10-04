@@ -42,6 +42,10 @@ async function request(endpoint, options = {}) {
 
     // Handle non-OK responses (4xx, 5xx)
     if (!response.ok) {
+        if (response.status === 401) {
+            localStorage.removeItem('dealbridge_token');
+            localStorage.removeItem('dealbridge_auth');
+        }
         const errorData = await response.json().catch(() => ({}));
         let message = `Request failed: ${response.status}`;
         if (typeof errorData.detail === 'string') {

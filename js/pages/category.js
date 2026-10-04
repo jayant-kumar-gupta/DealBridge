@@ -1,14 +1,12 @@
 import { initHeader } from '../components/header.js';
 import { initFooter } from '../components/footer.js';
-import { getProductsByCategory, products } from '../data/products.js';
-import { categories } from '../data/categories.js';
-import { partners } from '../data/partners.js';
 import { renderProductGrid } from '../components/product-card.js';
+import { api } from '../utils/api.js';
 
 let currentCategory = null;
 let categoryProducts = [];
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initHeader();
     initFooter();
     
@@ -16,67 +14,119 @@ document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     const catId = Number(params.get('id'));
     
-    currentCategory = categories.find(c => c.id === catId);
-    if (!currentCategory) {
-        document.querySelector('.category-hero h1').textContent = 'Category Not Found';
-        document.querySelector('.category-hero p').textContent = 'The category you are looking for does not exist.';
-        document.getElementById('category-results').innerHTML = '<div class="empty-state"><h3>No products found.</h3></div>';
+    if (!catId) {
+        showCategoryNotFound();
+        return;
+    }
+    
+    try {
+        currentCategory = await api.get(`/categories/${catId}`);
+    } catch (err) {
+        console.error('Failed to fetch category:', err);
+        showCategoryNotFound();
+        return;
+    }
+
+    if (!currentCategory || !currentCategory.id) {
+        showCategoryNotFound();
         return;
     }
     
     // Update Header
     document.title = `${currentCategory.name} — DealBridge`;
-    document.getElementById('category-icon').textContent = currentCategory.icon;
-    document.getElementById('category-title').textContent = currentCategory.name;
-    document.getElementById('category-desc').textContent = currentCategory.description;
-    document.getElementById('breadcrumb-name').textContent = currentCategory.name;
+    if (document.getElementById('category-icon')) {
+        document.getElementById('category-icon').textContent = currentCategory.icon || '📁';
+    }
+    if (document.getElementById('category-title')) {
+        document.getElementById('category-title').textContent = currentCategory.name;
+    }
+    if (document.getElementById('category-desc')) {
+        document.getElementById('category-desc').textContent = currentCategory.description || '';
+    }
+    if (document.getElementById('breadcrumb-name')) {
+        document.getElementById('breadcrumb-name').textContent = currentCategory.name;
+    }
     
-    // Get Products
-    categoryProducts = getProductsByCategory(catId);
+    // Get Products for this Category
+    try {
+        categoryProducts = await api.get(`/products/?category_id=${catId}&limit=100`);
+        if (!Array.isArray(categoryProducts)) {
+            categoryProducts = [];
+        }
+    } catch (err) {
+        console.error('Failed to fetch products for category:', err);
+        categoryProducts = [];
+    }
     
     initFilters();
     setupEventListeners();
     applyFiltersAndSort();
 });
 
+function showCategoryNotFound() {
+    const heroH1 = document.querySelector('.category-hero h1');
+    if (heroH1) heroH1.textContent = 'Category Not Found';
+    const heroP = document.querySelector('.category-hero p');
+    if (heroP) heroP.textContent = 'The category you are looking for does not exist.';
+    const results = document.getElementById('category-results');
+    if (results) results.innerHTML = '<div class="empty-state"><h3>No products found.</h3></div>';
+}
+
 function initFilters() {
     // Populate Brands based on category products
-    const brands = [...new Set(categoryProducts.map(p => p.brand))].sort();
+    const brands = [...new Set(categoryProducts.map(p => p.brand).filter(Boolean))].sort();
     const brandContainer = document.getElementById('filter-brands');
-    brandContainer.innerHTML = brands.map(b => `
-        <li><label><input type="checkbox" name="brand" value="${b}"> ${b}</label></li>
-    `).join('');
-    
-    // Populate Partners
-    const partnerContainer = document.getElementById('filter-partners');
-    partnerContainer.innerHTML = partners.map(p => `
-        <li><label><input type="checkbox" name="partner" value="${p.id}"> ${p.name}</label></li>
-    `).join('');
+    if (brandContainer) {
+        if (brands.length === 0) {
+            brandContainer.innerHTML = '<li style="color: var(--color-text-secondary); font-size: 0.85rem;">No brands available</li>';
+        } else {
+            brandContainer.innerHTML = brands.map(b => `
+                <li><label><input type="checkbox" name="brand" value="${b}"> ${b}</label></li>
+            `).join('');
+        }
+    }
 }
 
 function setupEventListeners() {
     const form = document.getElementById('filter-form');
-    if (!form) return;
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            applyFiltersAndSort();
+            if (window.innerWidth <= 768) {
+                const sidebar = document.getElementById('filter-sidebar');
+                if (sidebar) sidebar.classList.remove('active');
+            }
+        });
+        form.addEventListener('change', applyFiltersAndSort);
+        form.addEventListener('input', applyFiltersAndSort);
+    }
     
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        applyFiltersAndSort();
-        if (window.innerWidth <= 768) {
-            document.getElementById('filter-sidebar').classList.remove('active');
-        }
-    });
-    
-    document.getElementById('sort-select').addEventListener('change', applyFiltersAndSort);
+    const sortSelect = document.getElementById('sort-select');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', applyFiltersAndSort);
+    }
     
     // Mobile filter toggle
-    document.getElementById('filter-toggle-btn').addEventListener('click', () => {
-        document.getElementById('filter-sidebar').classList.add('active');
-        document.querySelector('.filter-sidebar-header').style.display = 'flex';
-    });
+    const toggleBtn = document.getElementById('filter-toggle-btn');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const sidebar = document.getElementById('filter-sidebar');
+            if (sidebar) {
+                sidebar.classList.add('active');
+                const header = document.querySelector('.filter-sidebar-header');
+                if (header) header.style.display = 'flex';
+            }
+        });
+    }
     
-    document.getElementById('filter-close-btn').addEventListener('click', () => {
-        document.getElementById('filter-sidebar').classList.remove('active');
-    });
+    const closeBtn = document.getElementById('filter-close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            const sidebar = document.getElementById('filter-sidebar');
+            if (sidebar) sidebar.classList.remove('active');
+        });
+    }
 }
 
 function applyFiltersAndSort() {
@@ -84,39 +134,41 @@ function applyFiltersAndSort() {
     
     // Form values
     const form = document.getElementById('filter-form');
-    const formData = new FormData(form);
+    const formData = form ? new FormData(form) : new FormData();
     
     const selectedBrands = formData.getAll('brand');
-    const selectedPartners = formData.getAll('partner').map(Number);
-    const minPrice = Number(document.getElementById('price-min').value) || 0;
-    const maxPrice = Number(document.getElementById('price-max').value) || Infinity;
-    const discount = Number(formData.get('discount')) || 0;
+    const minPriceInput = document.getElementById('price-min');
+    const maxPriceInput = document.getElementById('price-max');
+    const minPrice = minPriceInput && minPriceInput.value ? Number(minPriceInput.value) : 0;
+    const maxPrice = maxPriceInput && maxPriceInput.value ? Number(maxPriceInput.value) : Infinity;
     
-    // Apply Filters
+    // Apply Brands Filter
     if (selectedBrands.length > 0) {
         filtered = filtered.filter(p => selectedBrands.includes(p.brand));
     }
-    if (selectedPartners.length > 0) {
-        filtered = filtered.filter(p => p.partnerPrices.some(pp => selectedPartners.includes(pp.partnerId)));
-    }
-    filtered = filtered.filter(p => p.ourPrice >= minPrice && p.ourPrice <= maxPrice);
-    if (discount > 0) {
-        filtered = filtered.filter(p => p.discount >= discount);
-    }
+    
+    // Apply Price Filter (using p.our_deal)
+    filtered = filtered.filter(p => {
+        const price = p.our_deal !== null && p.our_deal !== undefined ? p.our_deal : 0;
+        return price >= minPrice && price <= maxPrice;
+    });
     
     // Apply Sort
-    const sort = document.getElementById('sort-select').value;
+    const sortSelect = document.getElementById('sort-select');
+    const sort = sortSelect ? sortSelect.value : 'relevance';
     if (sort === 'price-low') {
-        filtered.sort((a, b) => a.ourPrice - b.ourPrice);
+        filtered.sort((a, b) => (a.our_deal ?? 0) - (b.our_deal ?? 0));
     } else if (sort === 'price-high') {
-        filtered.sort((a, b) => b.ourPrice - a.ourPrice);
-    } else if (sort === 'discount') {
-        filtered.sort((a, b) => b.discount - a.discount);
+        filtered.sort((a, b) => (b.our_deal ?? 0) - (a.our_deal ?? 0));
     } else if (sort === 'rating') {
-        filtered.sort((a, b) => b.rating - a.rating);
+        filtered.sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0));
     }
     
     // Render
-    document.getElementById('result-count-label').textContent = `Showing ${filtered.length} products in ${currentCategory.name}`;
+    const countLabel = document.getElementById('result-count-label');
+    if (countLabel) {
+        const catName = currentCategory ? currentCategory.name : 'Category';
+        countLabel.textContent = `Showing ${filtered.length} products in ${catName}`;
+    }
     renderProductGrid(filtered, '#category-results');
 }

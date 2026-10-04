@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query, HTTPException, status, Depends, Response
-from sqlmodel import select, func
+from sqlmodel import select, func, or_
 from slugify import slugify
 from app.core.database import SessionDep
 from typing import Annotated, List
@@ -13,14 +13,24 @@ router = APIRouter(prefix="/products", tags=["products"])
 @router.get("/", response_model=List[ProductRead])
 def get_products(
         session: SessionDep, 
-        limit: Annotated[int, Query(le=20)] = 20,
+        limit: Annotated[int, Query(le=100)] = 50,
         offset: int = 0, 
         name: str | None = None,
+        q: str | None = None,
         category_id: int | None = None,
     ) -> List[Product]:
     statement = select(Product)
-    if name:
-        statement = statement.where(func.lower(Product.name).like(f"%{name.lower()}%"))
+    search_term = q or name
+    if search_term:
+        pattern = f"%{search_term.lower()}%"
+        statement = statement.where(
+            or_(
+                func.lower(Product.name).like(pattern),
+                func.lower(func.coalesce(Product.brand, "")).like(pattern),
+                func.lower(func.coalesce(Product.description, "")).like(pattern),
+                func.lower(func.coalesce(Product.short_describe, "")).like(pattern),
+            )
+        )
     if category_id:
         statement = statement.where(Product.category_id == category_id)
 

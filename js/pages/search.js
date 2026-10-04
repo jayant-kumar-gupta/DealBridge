@@ -1,26 +1,50 @@
 import { initHeader } from '../components/header.js';
 import { initFooter } from '../components/footer.js';
-import { searchProducts, products } from '../data/products.js';
-import { categories } from '../data/categories.js';
-import { partners } from '../data/partners.js';
 import { renderProductGrid } from '../components/product-card.js';
+import { api } from '../utils/api.js';
 
 let currentQuery = '';
 let searchResults = [];
+let allCategories = [];
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initHeader();
     initFooter();
     
     // Parse URL params
     const params = new URLSearchParams(window.location.search);
-    currentQuery = params.get('q') || '';
+    currentQuery = (params.get('q') || '').trim();
     
-    document.getElementById('breadcrumb-query').textContent = currentQuery;
-    document.getElementById('page-title-query').textContent = currentQuery;
+    const breadcrumbQuery = document.getElementById('breadcrumb-query');
+    if (breadcrumbQuery) {
+        breadcrumbQuery.textContent = currentQuery ? `"${currentQuery}"` : 'All Products';
+    }
+    const pageTitleQuery = document.getElementById('page-title-query');
+    if (pageTitleQuery) {
+        pageTitleQuery.textContent = currentQuery ? currentQuery : 'All Products';
+    }
+    document.title = currentQuery ? `Search: "${currentQuery}" — DealBridge` : 'All Products — DealBridge';
+
+    // Populate search bar in header with current query if available
+    const headerSearchInputs = document.querySelectorAll('input[type="search"]');
+    headerSearchInputs.forEach(input => {
+        if (currentQuery) input.value = currentQuery;
+    });
     
-    // Initial Search
-    searchResults = searchProducts(currentQuery);
+    // Fetch categories and search results in parallel
+    try {
+        const [categoriesData, productsData] = await Promise.all([
+            api.get('/categories/'),
+            api.get(currentQuery ? `/products/?q=${encodeURIComponent(currentQuery)}&limit=100` : '/products/?limit=100')
+        ]);
+        
+        allCategories = Array.isArray(categoriesData) ? categoriesData : [];
+        searchResults = Array.isArray(productsData) ? productsData : [];
+    } catch (err) {
+        console.error('Failed to load search data:', err);
+        searchResults = [];
+        allCategories = [];
+    }
     
     initFilters();
     setupEventListeners();
@@ -28,46 +52,72 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initFilters() {
-    // Populate Categories
+    // Populate Categories filter
     const catContainer = document.getElementById('filter-categories');
-    catContainer.innerHTML = categories.map(c => `
-        <li><label><input type="checkbox" name="category" value="${c.id}"> ${c.name}</label></li>
-    `).join('');
+    if (catContainer) {
+        if (allCategories.length === 0) {
+            catContainer.innerHTML = '<li style="color: var(--color-text-secondary); font-size: 0.85rem;">No categories available</li>';
+        } else {
+            catContainer.innerHTML = allCategories.map(c => `
+                <li><label><input type="checkbox" name="category" value="${c.id}"> ${c.icon ? c.icon + ' ' : ''}${c.name}</label></li>
+            `).join('');
+        }
+    }
     
-    // Populate Brands based on all products
-    const brands = [...new Set(products.map(p => p.brand))].sort();
+    // Populate Brands based on search results
+    const brands = [...new Set(searchResults.map(p => p.brand).filter(Boolean))].sort();
     const brandContainer = document.getElementById('filter-brands');
-    brandContainer.innerHTML = brands.map(b => `
-        <li><label><input type="checkbox" name="brand" value="${b}"> ${b}</label></li>
-    `).join('');
-    
-    // Populate Partners
-    const partnerContainer = document.getElementById('filter-partners');
-    partnerContainer.innerHTML = partners.map(p => `
-        <li><label><input type="checkbox" name="partner" value="${p.id}"> ${p.name}</label></li>
-    `).join('');
+    if (brandContainer) {
+        if (brands.length === 0) {
+            brandContainer.innerHTML = '<li style="color: var(--color-text-secondary); font-size: 0.85rem;">No brands available</li>';
+        } else {
+            brandContainer.innerHTML = brands.map(b => `
+                <li><label><input type="checkbox" name="brand" value="${b}"> ${b}</label></li>
+            `).join('');
+        }
+    }
 }
 
 function setupEventListeners() {
-    document.getElementById('filter-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        applyFiltersAndSort();
-        if (window.innerWidth <= 768) {
-            document.getElementById('filter-sidebar').classList.remove('active');
-        }
-    });
+    const form = document.getElementById('filter-form');
+    if (form) {
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            applyFiltersAndSort();
+            if (window.innerWidth <= 768) {
+                const sidebar = document.getElementById('filter-sidebar');
+                if (sidebar) sidebar.classList.remove('active');
+            }
+        });
+        form.addEventListener('change', applyFiltersAndSort);
+        form.addEventListener('input', applyFiltersAndSort);
+    }
     
-    document.getElementById('sort-select').addEventListener('change', applyFiltersAndSort);
+    const sortSelect = document.getElementById('sort-select');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', applyFiltersAndSort);
+    }
     
     // Mobile filter toggle
-    document.getElementById('filter-toggle-btn').addEventListener('click', () => {
-        document.getElementById('filter-sidebar').classList.add('active');
-        document.querySelector('.filter-sidebar-header').style.display = 'flex';
-    });
+    const toggleBtn = document.getElementById('filter-toggle-btn');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const sidebar = document.getElementById('filter-sidebar');
+            if (sidebar) {
+                sidebar.classList.add('active');
+                const header = document.querySelector('.filter-sidebar-header');
+                if (header) header.style.display = 'flex';
+            }
+        });
+    }
     
-    document.getElementById('filter-close-btn').addEventListener('click', () => {
-        document.getElementById('filter-sidebar').classList.remove('active');
-    });
+    const closeBtn = document.getElementById('filter-close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            const sidebar = document.getElementById('filter-sidebar');
+            if (sidebar) sidebar.classList.remove('active');
+        });
+    }
 }
 
 function applyFiltersAndSort() {
@@ -75,44 +125,52 @@ function applyFiltersAndSort() {
     
     // Form values
     const form = document.getElementById('filter-form');
-    const formData = new FormData(form);
+    const formData = form ? new FormData(form) : new FormData();
     
     const selectedCats = formData.getAll('category').map(Number);
     const selectedBrands = formData.getAll('brand');
-    const selectedPartners = formData.getAll('partner').map(Number);
-    const minPrice = Number(document.getElementById('price-min').value) || 0;
-    const maxPrice = Number(document.getElementById('price-max').value) || Infinity;
-    const discount = Number(formData.get('discount')) || 0;
+    const minPriceInput = document.getElementById('price-min');
+    const maxPriceInput = document.getElementById('price-max');
+    const minPrice = minPriceInput && minPriceInput.value ? Number(minPriceInput.value) : 0;
+    const maxPrice = maxPriceInput && maxPriceInput.value ? Number(maxPriceInput.value) : Infinity;
     
-    // Apply Filters
+    // Apply Category Filter
     if (selectedCats.length > 0) {
-        filtered = filtered.filter(p => selectedCats.includes(p.categoryId));
+        filtered = filtered.filter(p => selectedCats.includes(p.category_id));
     }
+    
+    // Apply Brand Filter
     if (selectedBrands.length > 0) {
         filtered = filtered.filter(p => selectedBrands.includes(p.brand));
     }
-    if (selectedPartners.length > 0) {
-        filtered = filtered.filter(p => p.partnerPrices.some(pp => selectedPartners.includes(pp.partnerId)));
-    }
-    filtered = filtered.filter(p => p.ourPrice >= minPrice && p.ourPrice <= maxPrice);
-    if (discount > 0) {
-        filtered = filtered.filter(p => p.discount >= discount);
-    }
+    
+    // Apply Price Filter
+    filtered = filtered.filter(p => {
+        const price = p.our_deal !== null && p.our_deal !== undefined ? p.our_deal : 0;
+        return price >= minPrice && price <= maxPrice;
+    });
     
     // Apply Sort
-    const sort = document.getElementById('sort-select').value;
+    const sortSelect = document.getElementById('sort-select');
+    const sort = sortSelect ? sortSelect.value : 'relevance';
     if (sort === 'price-low') {
-        filtered.sort((a, b) => a.ourPrice - b.ourPrice);
+        filtered.sort((a, b) => (a.our_deal ?? 0) - (b.our_deal ?? 0));
     } else if (sort === 'price-high') {
-        filtered.sort((a, b) => b.ourPrice - a.ourPrice);
-    } else if (sort === 'discount') {
-        filtered.sort((a, b) => b.discount - a.discount);
+        filtered.sort((a, b) => (b.our_deal ?? 0) - (a.our_deal ?? 0));
     } else if (sort === 'rating') {
-        filtered.sort((a, b) => b.rating - a.rating);
+        filtered.sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0));
     }
     
-    // Render
-    document.getElementById('search-count').textContent = `${filtered.length} results found`;
-    document.getElementById('result-count-label').textContent = `Showing ${filtered.length} results`;
+    // Render Counts
+    const searchCount = document.getElementById('search-count');
+    if (searchCount) {
+        searchCount.textContent = `${filtered.length} product${filtered.length === 1 ? '' : 's'} found`;
+    }
+    const resultCountLabel = document.getElementById('result-count-label');
+    if (resultCountLabel) {
+        resultCountLabel.textContent = `Showing ${filtered.length} results`;
+    }
+    
+    // Render Grid
     renderProductGrid(filtered, '#search-results');
 }

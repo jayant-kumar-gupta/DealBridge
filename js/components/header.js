@@ -1,6 +1,5 @@
 import { isLoggedIn, getCurrentUser, logout } from '../state/auth.js';
-import { getCartCount } from '../state/cart.js';
-import { getUnreadCount } from '../data/notifications.js';
+import { getCartCount } from '../state/cart.js?v=2.1';
 import { toggleDropdown } from './dropdown.js';
 
 export function initHeader() {
@@ -51,11 +50,6 @@ function renderHeader(headerEl) {
               <a href="/orders.html" class="dropdown-item">📦 My Orders</a>
               <a href="/wishlist.html" class="dropdown-item">❤️ Wishlist</a>
               <a href="/addresses.html" class="dropdown-item">📍 Manage Addresses</a>
-              <a href="/promo-codes.html" class="dropdown-item">🎟️ Promo Codes</a>
-              <a href="/notifications.html" class="dropdown-item" style="display: flex; justify-content: space-between; align-items: center;">
-                <span>🔔 Notifications</span>
-                <span class="badge badge-discount" id="notification-badge" style="display:none; font-size: 10px; padding: 2px 6px;">0</span>
-              </a>
               <div class="dropdown-divider"></div>
               <button class="dropdown-item logout-btn" style="width: 100%; text-align: left; background: none; border: none; font-size: inherit; color: var(--color-error); cursor: pointer;">🚪 Logout</button>
             </div>
@@ -100,8 +94,6 @@ function renderHeader(headerEl) {
             <li><a href="/orders.html">📦 My Orders</a></li>
             <li><a href="/wishlist.html">❤️ Wishlist</a></li>
             <li><a href="/addresses.html">📍 Addresses</a></li>
-            <li><a href="/promo-codes.html">🎟️ Promo Codes</a></li>
-            <li><a href="/notifications.html">🔔 Notifications</a></li>
             <li><button class="logout-btn-mobile btn btn-ghost btn-full" style="justify-content: flex-start; color: var(--color-error); padding: 12px 0;">🚪 Logout</button></li>
           ` : `
             <li style="border-top: 1px solid var(--color-border); margin-top: 8px; padding-top: 8px;"><a href="/login.html" class="btn btn-primary btn-full">Login / Sign Up</a></li>
@@ -110,16 +102,6 @@ function renderHeader(headerEl) {
       </div>
     </nav>
   `;
-
-  // Update notification badge if user is logged in
-  if (loggedIn && user) {
-    const unreadCount = getUnreadCount(user.id);
-    const badge = document.getElementById('notification-badge');
-    if (badge && unreadCount > 0) {
-      badge.textContent = unreadCount;
-      badge.style.display = 'inline-block';
-    }
-  }
 }
 
 function setupHeaderEvents(headerEl) {
