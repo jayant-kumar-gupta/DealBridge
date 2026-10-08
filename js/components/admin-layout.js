@@ -17,8 +17,6 @@ export function initAdminLayout() {
           <li class="admin-nav__item"><a href="/admin/categories.html" data-path="/admin/categories.html">📂 Categories</a></li>
           <li class="admin-nav__item"><a href="/admin/partners.html" data-path="/admin/partners.html">🤝 Partners</a></li>
           <li class="admin-nav__item"><a href="/admin/prices.html" data-path="/admin/prices.html">💰 Prices</a></li>
-          <li class="admin-nav__item"><a href="/admin/discounts.html" data-path="/admin/discounts.html">🏷️ Discounts</a></li>
-          <li class="admin-nav__item"><a href="/admin/promo-codes.html" data-path="/admin/promo-codes.html">🎟️ Promo Codes</a></li>
           <li class="admin-nav__item"><a href="/admin/orders.html" data-path="/admin/orders.html">📋 Orders</a></li>
           <li class="admin-nav__item"><a href="/admin/reviews.html" data-path="/admin/reviews.html">⭐ Reviews</a></li>
           <li class="admin-nav__item"><a href="#" id="admin-logout">🚪 Logout</a></li>

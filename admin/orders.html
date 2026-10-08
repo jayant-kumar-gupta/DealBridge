@@ -24,12 +24,11 @@
                 <h1 class="page-title">Orders</h1>
             </header>
             
-            <div style="margin-bottom: var(--space-lg); display: flex; gap: var(--space-md);">
-                <select id="order-status-filter" class="form-select" style="max-width: 200px;">
+            <div style="margin-bottom: var(--space-lg); display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: center;">
+                <input type="search" id="order-search" class="form-input" placeholder="Search order ID, user, product..." style="max-width: 280px; padding: 8px 12px;">
+                <select id="order-status-filter" class="form-select" style="max-width: 180px;">
                     <option value="">All Statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="shipped">Shipped</option>
+                    <option value="active">Active</option>
                     <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
                 </select>
@@ -41,11 +40,11 @@
                         <tr>
                             <th>Order ID</th>
                             <th>Date</th>
-                            <th>Customer</th>
-                            <th>Amount</th>
-                            <th>Partner</th>
+                            <th>Customer & Delivery</th>
+                            <th>Items</th>
+                            <th>Total Amount</th>
                             <th>Status</th>
-                            <th>Actions</th>
+                            <th style="text-align: right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="orders-table-body">

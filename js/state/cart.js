@@ -1,7 +1,12 @@
 import { api } from '../utils/api.js';
 import { isLoggedIn } from './auth.js';
 
-const CART_KEY = 'dealbridge_cart';
+const USER_CART_KEY = 'dealbridge_cart';
+const GUEST_CART_KEY = 'dealbridge_guest_cart';
+
+function getActiveCartKey() {
+  return isLoggedIn() ? USER_CART_KEY : GUEST_CART_KEY;
+}
 
 /**
  * Normalizes cart item from backend into frontend cart item representation.
@@ -27,7 +32,8 @@ function normalizeBackendItem(item) {
 
 export function getCart() {
   try {
-    const data = localStorage.getItem(CART_KEY);
+    const key = getActiveCartKey();
+    const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : [];
   } catch {
     return [];
@@ -35,7 +41,8 @@ export function getCart() {
 }
 
 function saveCart(cart) {
-  localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  const key = getActiveCartKey();
+  localStorage.setItem(key, JSON.stringify(cart));
   document.dispatchEvent(new CustomEvent('cart-change', { detail: { cart, count: getCartCount() } }));
 }
 
@@ -50,7 +57,8 @@ export async function fetchCart() {
     const items = await api.get('/carts/');
     if (Array.isArray(items)) {
       const cart = items.map(normalizeBackendItem);
-      saveCart(cart);
+      localStorage.setItem(USER_CART_KEY, JSON.stringify(cart));
+      document.dispatchEvent(new CustomEvent('cart-change', { detail: { cart, count: getCartCount() } }));
       return cart;
     }
   } catch (err) {
@@ -59,18 +67,33 @@ export async function fetchCart() {
   return getCart();
 }
 
+let isSyncing = false;
+
 /**
  * Merges local guest cart items into user's DB cart upon login.
+ * Operates ONLY on guest cart items, then immediately clears guest cart so it never re-multiplies.
  */
 export async function syncGuestCart() {
-  if (!isLoggedIn()) return getCart();
-  const localItems = getCart();
-  if (!localItems || localItems.length === 0) {
+  if (!isLoggedIn() || isSyncing) return getCart();
+
+  let guestItems = [];
+  try {
+    const data = localStorage.getItem(GUEST_CART_KEY);
+    guestItems = data ? JSON.parse(data) : [];
+  } catch {
+    guestItems = [];
+  }
+
+  // Clear guest cart immediately so items can never be re-synced
+  localStorage.removeItem(GUEST_CART_KEY);
+
+  if (!guestItems || guestItems.length === 0) {
     return await fetchCart();
   }
 
+  isSyncing = true;
   try {
-    for (const item of localItems) {
+    for (const item of guestItems) {
       try {
         await api.post('/carts/', {
           product_id: item.productId,
@@ -83,6 +106,8 @@ export async function syncGuestCart() {
     }
   } catch (err) {
     console.error('Error during guest cart sync:', err);
+  } finally {
+    isSyncing = false;
   }
 
   return await fetchCart();
@@ -191,7 +216,8 @@ export async function updateQuantity(productId, quantity) {
 }
 
 export function clearCart() {
-  localStorage.removeItem(CART_KEY);
+  localStorage.removeItem(USER_CART_KEY);
+  localStorage.removeItem(GUEST_CART_KEY);
   document.dispatchEvent(new CustomEvent('cart-change', { detail: { cart: [], count: 0 } }));
   return [];
 }
@@ -233,7 +259,8 @@ if (typeof window !== 'undefined') {
     if (e.detail?.loggedIn) {
       await syncGuestCart();
     } else {
-      localStorage.removeItem(CART_KEY);
+      localStorage.removeItem(USER_CART_KEY);
+      localStorage.removeItem(GUEST_CART_KEY);
       document.dispatchEvent(new CustomEvent('cart-change', { detail: { cart: [], count: 0 } }));
     }
   });

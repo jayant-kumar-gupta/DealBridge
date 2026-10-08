@@ -83,12 +83,18 @@ def create_order(order_detail: OrderCreate, session: SessionDep, current_user: U
 def read_orders(session: SessionDep, current_user: User = Depends(get_current_user)):
     orders = session.exec(select(Order).where(Order.user_id == current_user.id)).all()
 
+    if current_user.is_admin:
+        orders = session.exec(select(Order)).all()
+
     if not orders:
         return []
 
     response = []
     for order in orders:
-        address = session.exec(select(Address).where(Address.user_id == current_user.id, Address.id == order.address_id)).first()
+        if not current_user.is_admin:
+            address = session.exec(select(Address).where(Address.user_id == current_user.id, Address.id == order.address_id)).first()
+        else:
+            address = session.exec(select(Address).where(Address.user_id == order.user_id, Address.id == order.address_id)).first()
         item_data = []
         for item in order.items:
             product = session.get(Product, item.product_id)

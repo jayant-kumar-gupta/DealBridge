@@ -161,6 +161,11 @@ function setupHeaderEvents(headerEl) {
     setupHeaderEvents(headerEl);
     updateThemeIcon();
   });
+
+  document.addEventListener('user-update', () => {
+    renderHeader(headerEl);
+    setupHeaderEvents(headerEl);
+  });
 }
 
 function initTheme() {

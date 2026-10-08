@@ -5,6 +5,7 @@ from sqlmodel import select
 from app.schemas.ratings_reviews import RatingSchema, CommentCreate, CommentRead, CommentUpdate
 from app.models.database import ProductComment, Rating, Product, User
 from app.core.utils import get_current_user
+from app.api.v1.endpoints.user_auth import require_admin
 
 router = APIRouter(prefix="/ratings", tags=["Ratings and Reviews"])
 
@@ -161,6 +162,15 @@ def create_comment(comment_detail: CommentCreate, session: SessionDep, current_u
     session.commit()
     session.refresh(comment)
     return build_comment_read(comment, session, current_user)
+
+
+# Read all comments (For admins)
+@router.get("/comment/all", response_model=List[CommentRead])
+def get_all_comments(session: SessionDep, current_user: User = Depends(require_admin)) -> List[CommentRead]:
+    comments = session.exec(select(ProductComment)).all()
+    if not comments:
+        return []
+    return [build_comment_read(c, session) for c in comments]
 
 # Read Comments By User ID (Not generally used)
 @router.get("/comment", response_model=List[CommentRead])

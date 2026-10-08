@@ -90,6 +90,7 @@ export function logout() {
   localStorage.removeItem(AUTH_KEY);
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem('dealbridge_cart');
+  localStorage.removeItem('dealbridge_guest_cart');
   document.dispatchEvent(new CustomEvent('cart-change', { detail: { cart: [], count: 0 } }));
   document.dispatchEvent(new CustomEvent('auth-change', { detail: { user: null, loggedIn: false } }));
 }
@@ -118,7 +119,7 @@ export async function fetchCurrentUser() {
     const user = normalizeUser(rawUser);
     if (user) {
       localStorage.setItem(AUTH_KEY, JSON.stringify(user));
-      document.dispatchEvent(new CustomEvent('auth-change', { detail: { user, loggedIn: true } }));
+      document.dispatchEvent(new CustomEvent('user-update', { detail: { user } }));
     }
     return user;
   } catch (error) {

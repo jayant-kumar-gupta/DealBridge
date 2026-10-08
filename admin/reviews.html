@@ -21,20 +21,32 @@
         <aside class="admin-sidebar" id="admin-sidebar"></aside>
         <main class="admin-main">
             <header class="admin-header">
-                <h1 class="page-title">Reviews</h1>
+                <h1 class="page-title">Reviews & Comments</h1>
             </header>
+
+            <div style="margin-bottom: var(--space-lg); display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: center;">
+                <input type="search" id="review-search" class="form-input" placeholder="Search comments, authors, or products..." style="max-width: 300px; padding: 8px 12px;">
+                <select id="review-product-filter" class="form-select" style="max-width: 240px;">
+                    <option value="">All Products</option>
+                </select>
+            </div>
+
             <div class="admin-table-container">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Product ID</th>
+                            <th style="width: 60px;">ID</th>
+                            <th>Product</th>
                             <th>Author</th>
-                            <th>Rating</th>
-                            <th>Date</th>
-                            <th>Text</th>
+                            <th style="width: 120px;">Product Rating</th>
+                            <th style="width: 130px;">Date</th>
+                            <th>Comment</th>
+                            <th style="width: 150px; text-align: right;">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="reviews-table-body"></tbody>
+                    <tbody id="reviews-table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
                 </table>
             </div>
         </main>

@@ -22,18 +22,26 @@
         <main class="admin-main">
             <header class="admin-header">
                 <h1 class="page-title">Categories</h1>
+                <div style="display: flex; gap: var(--space-md); align-items: center;">
+                    <input type="search" id="category-search" placeholder="Search categories..." class="form-input" style="width: 220px; padding: 8px 12px;">
+                    <button class="btn btn-primary" id="add-category-btn">+ Add Category</button>
+                </div>
             </header>
             <div class="admin-table-container">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Icon</th>
+                            <th style="width: 60px;">ID</th>
+                            <th style="width: 70px;">Icon</th>
                             <th>Name</th>
-                            <th>Products Count</th>
+                            <th>Description</th>
+                            <th style="width: 130px;">Products Count</th>
+                            <th style="width: 140px; text-align: right;">Actions</th>
                         </tr>
                     </thead>
-                    <tbody id="categories-table-body"></tbody>
+                    <tbody id="categories-table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
                 </table>
             </div>
         </main>

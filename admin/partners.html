@@ -22,19 +22,22 @@
         <main class="admin-main">
             <header class="admin-header">
                 <h1 class="page-title">Partners</h1>
-                <button class="btn btn-primary" id="add-partner-btn">+ Add Partner</button>
+                <div style="display: flex; gap: var(--space-md); align-items: center;">
+                    <input type="search" id="partner-search" placeholder="Search partners..." class="form-input" style="width: 220px; padding: 8px 12px;">
+                    <button class="btn btn-primary" id="add-partner-btn">+ Add Partner</button>
+                </div>
             </header>
             
             <div class="admin-table-container">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
+                            <th style="width: 60px;">ID</th>
                             <th>Partner Name</th>
-                            <th>Status</th>
-                            <th>Rating</th>
-                            <th>Delivery Time</th>
-                            <th>Actions</th>
+                            <th>Website</th>
+                            <th style="width: 130px;">Badge Color</th>
+                            <th>Description</th>
+                            <th style="width: 140px; text-align: right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="partners-table-body">

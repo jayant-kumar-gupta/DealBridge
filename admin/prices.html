@@ -21,10 +21,12 @@
         <aside class="admin-sidebar" id="admin-sidebar"></aside>
         <main class="admin-main">
             <header class="admin-header">
-                <h1 class="page-title">Price Comparison</h1>
+                <h1 class="page-title">Prices</h1>
+                <button class="btn btn-primary" id="add-price-btn">+ Add Partner Price</button>
             </header>
             
-            <div style="margin-bottom: var(--space-lg); display: flex; gap: var(--space-md);">
+            <div style="margin-bottom: var(--space-lg); display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: center;">
+                <input type="search" id="price-search" class="form-input" placeholder="Search product or partner..." style="max-width: 260px; padding: 8px 12px;">
                 <select id="price-partner-filter" class="form-select" style="max-width: 200px;">
                     <option value="">All Partners</option>
                 </select>
@@ -40,9 +42,10 @@
                             <th>Product</th>
                             <th>Partner</th>
                             <th>Partner Price</th>
-                            <th>Our Price</th>
-                            <th>Savings</th>
-                            <th>Discount %</th>
+                            <th>Our Deal</th>
+                            <th>Stock Count</th>
+                            <th>Partner Link</th>
+                            <th style="text-align: right;">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="prices-table-body">
