@@ -7,6 +7,29 @@ from app.core.utils import hash, verify, create_access_token, get_current_user
 
 router = APIRouter(prefix="/login", tags=["Login & Authentication"])
 
+def is_strong_password(password: str) -> bool:
+    count = 0
+    contains_lower = False
+    contains_upper = False
+    contains_digit = False
+    contains_special = False
+
+    for ch in password:
+        if ch.isupper():
+            contains_upper = True
+        elif ch.islower():
+            contains_lower = True
+        elif ch.isnumeric():
+            contains_digit = True
+        else:
+            contains_special = True
+
+        count += 1
+
+    if contains_lower and contains_upper and contains_digit and contains_special and count >= 8:
+        return True
+    return False
+
 
 def build_user_read(user: User) -> UserRead:
     full_name = f"{user.firstname or ''} {user.lastname or ''}".strip()
@@ -188,6 +211,9 @@ def create_user(user_credentials: UserRegister, session: SessionDep):
         firstname = parts[0]
         lastname = parts[1] if len(parts) > 1 else None
 
+    if not is_strong_password(user_credentials.password):
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Password is not strong!")
+
     user = User(
         phone=user_credentials.phone,
         email=user_credentials.email,
@@ -216,6 +242,9 @@ def create_admin(session: SessionDep, admin_credentials: AdminRegister, current_
         existing_email = session.exec(email_stmt).first()
         if existing_email:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered")
+
+    if not is_strong_password(admin_credentials.password):
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Password is not strong!")
 
     admin = User(
         phone=admin_credentials.phone,
