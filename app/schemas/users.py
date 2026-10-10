@@ -50,3 +50,15 @@ class AdminRegister(BaseModel):
     phone: str
     email: EmailStr | None = None
     password: str
+
+class ForgotPasswordRequest(BaseModel):
+    identifier: EmailStr | str
+
+class VerifyOTPRequest(BaseModel):
+    identifier: EmailStr | str
+    otp: str
+
+class ResetPasswordRequest(BaseModel):
+    identifier: EmailStr | str
+    otp: str
+    new_password: str

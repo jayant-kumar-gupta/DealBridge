@@ -141,3 +141,37 @@ export async function updateProfile(profileData) {
     return { success: false, message: error.message || 'Update failed' };
   }
 }
+
+export async function requestPasswordResetOtp(identifier) {
+  try {
+    const data = await api.post('/login/forgot-password/otp', { identifier });
+    return { success: true, message: data.message || 'An OTP has been sent successfully.' };
+  } catch (error) {
+    return { success: false, message: error.message || 'Failed to send OTP' };
+  }
+}
+
+export async function verifyPasswordResetOtp(identifier, otp) {
+  try {
+    const data = await api.post('/login/forgot-password/verify', { identifier, otp });
+    if (data && data.message && data.message.includes('not matched')) {
+      return { success: false, message: data.message };
+    }
+    return { success: true, message: data.message || 'OTP validated successfully' };
+  } catch (error) {
+    return { success: false, message: error.message || 'Invalid or expired OTP' };
+  }
+}
+
+export async function resetPasswordWithOtp(identifier, otp, newPassword) {
+  try {
+    const data = await api.put('/login/reset-password', {
+      identifier,
+      otp,
+      new_password: newPassword
+    });
+    return { success: true, message: data.message || 'Password changed successfully' };
+  } catch (error) {
+    return { success: false, message: error.message || 'Failed to reset password' };
+  }
+}

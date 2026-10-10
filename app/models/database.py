@@ -177,3 +177,13 @@ class Address(SQLModel, table = True):
 
     user: "User" = Relationship()
 
+# The endpoint for this table is in user_auth.py
+class OTPVerification(SQLModel, table = True):
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(index=True, foreign_key="user.id", ondelete="CASCADE")
+    otp: str = Field()
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
+    is_used: bool = Field(default=False)
+    attempts: int = Field(default=0, sa_column_kwargs={"server_default": "0"})
+
+    user: "User" = Relationship()

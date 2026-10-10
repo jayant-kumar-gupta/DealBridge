@@ -1,11 +1,27 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request
 from sqlmodel import select
-from app.schemas.users import UserRegister, UserLoginResponse, AdminRegister, UserRead, UserUpdate
+from app.schemas.users import UserRegister, UserLoginResponse, AdminRegister, UserRead, UserUpdate, ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest
 from app.core.database import SessionDep
-from app.models.database import User
+from app.models.database import User, OTPVerification
 from app.core.utils import hash, verify, create_access_token, get_current_user
+from fastapi import BackgroundTasks
+import secrets
+from datetime import datetime, timezone, timedelta
 
 router = APIRouter(prefix="/login", tags=["Login & Authentication"])
+
+def create_otp():
+    # secrets.randbelow(900000) generates a number from 0 to 899999
+    # Adding 100000 shifts the range perfectly to [100000, 999999]
+    code = 100000 + secrets.randbelow(900000)
+    return str(code)
+
+def check_otp_expiry(otp: OTPVerification, session: SessionDep):
+    created_at = otp.created_at.replace(tzinfo=timezone.utc) if otp.created_at.tzinfo is None else otp.created_at
+    if datetime.now(timezone.utc) - created_at > timedelta(minutes=10):
+        session.delete(otp)
+        session.commit()
+        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="OTP expired. Try generating a new one.")
 
 def is_strong_password(password: str) -> bool:
     count = 0
@@ -29,6 +45,12 @@ def is_strong_password(password: str) -> bool:
     if contains_lower and contains_upper and contains_digit and contains_special and count >= 8:
         return True
     return False
+
+def send_otp(otp: str, phone: str = "", email: str = ""):
+    # In development: print to console
+    # In production: call Twilio or AWS SNS API
+    message = f"OTP for Password Reset: {phone if phone else email}\nYour DealBridge OTP is {otp}"
+    print(message)
 
 
 def build_user_read(user: User) -> UserRead:
@@ -167,7 +189,7 @@ def update_current_user_profile(
             select(User).where(User.email == user_update.email, User.id != current_user.id)
         ).first()
         if existing_email:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered")
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already registered. Try logging in to that email.")
         current_user.email = user_update.email
     if user_update.phone is not None and user_update.phone != current_user.phone:
         existing_phone = session.exec(
@@ -258,3 +280,107 @@ def create_admin(session: SessionDep, admin_credentials: AdminRegister, current_
     session.refresh(admin)
 
     return {"message": "Admin Registered successfully", "user": build_user_read(admin)}
+
+@router.put("/reset-password")
+async def reset_password(details: ResetPasswordRequest, session: SessionDep):
+    if "@" in details.identifier:
+        user = session.exec(select(User).where(User.email == details.identifier)).first()
+    else:
+        user = session.exec(select(User).where(User.phone == details.identifier)).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    otp = session.exec(select(OTPVerification).where(OTPVerification.user_id == user.id)).first()
+    if not otp:
+        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Request Timeout! Try reseting password again")
+
+    check_otp_expiry(otp, session)
+
+    if verify(details.otp, otp.otp):
+        if not is_strong_password(details.new_password):
+            raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Password is not strong!")
+        user.password = hash(details.new_password)
+    else:
+        if otp.attempts == 5:
+            session.delete(otp)
+            session.commit()
+            raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="You exceeded the max attempt. Try generating new OTP.")
+        otp.attempts += 1
+        session.add(otp)
+        session.commit()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Something went wrong!")
+
+    session.add(user)
+    session.delete(otp)
+    session.commit()
+
+    return {"message": "Password changed successfully"}
+
+
+# OTP verification
+
+# Generating and Sending OTP
+@router.post("/forgot-password/otp")
+async def request_otp(details: ForgotPasswordRequest, background_task: BackgroundTasks, session: SessionDep):
+    if "@" in details.identifier:
+        user = session.exec(select(User).where(User.email == details.identifier)).first()
+    else:
+        user = session.exec(select(User).where(User.phone == details.identifier)).first()
+
+    if not user:
+        return {"message": "An OTP has been sent successfully."}
+
+    # Delete existing OTPs before creating a new one
+    existing_otps = session.exec(select(OTPVerification).where(OTPVerification.user_id == user.id)).all()
+    for old_otp in existing_otps:
+        session.delete(old_otp)
+    
+    otp = create_otp()
+    background_task.add_task(send_otp, otp, email=details.identifier)
+
+    detail = OTPVerification(
+        user_id=user.id,
+        otp=hash(otp),
+    )
+
+    session.add(detail)
+    session.commit()
+
+    return {"message": "An OTP has been sent successfully."}
+
+# Verifying User's OTP
+@router.post("/forgot-password/verify")
+async def read_otp(details: VerifyOTPRequest, session: SessionDep):
+    if "@" in details.identifier:
+        user = session.exec(select(User).where(User.email == details.identifier)).first()
+    else:
+        user = session.exec(select(User).where(User.phone == details.identifier)).first()
+
+    if not user:
+        return {"message": "OTP not matched. Try again!"}
+
+    target = session.exec(select(OTPVerification).where(OTPVerification.user_id == user.id)).first()
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OTP not found")
+
+    check_otp_expiry(target, session)
+    
+    if not verify(str(details.otp), target.otp):
+        if target.attempts == 5:
+            session.delete(target)
+            session.commit()
+            raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="You exceeded the max attempt. Try generating new OTP.")
+        target.attempts += 1
+        session.add(target)
+        session.commit()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Wrong OTP. Try again! Attempts remaining: {5 - target.attempts}")
+
+    if target.is_used:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="OTP has already been used. Try generating a new one")
+
+    target.is_used = True
+    session.add(target)
+    session.commit()
+    
+    return {"message": "OTP validated successfully"}
