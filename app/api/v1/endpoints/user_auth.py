@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from typing import Annotated, List
+from fastapi import APIRouter, HTTPException, status, Depends, Request, Query
 from sqlmodel import select
 from app.schemas.users import UserRegister, UserLoginResponse, AdminRegister, UserRead, UserUpdate, ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest
 from app.core.database import SessionDep
@@ -168,6 +169,17 @@ async def user_login(
 def get_current_user_profile(current_user: User = Depends(get_current_user)):
     return build_user_read(current_user)
 
+@router.get("/users", response_model=List[UserRead])
+async def get_all_users(
+    session: SessionDep,
+    limit: Annotated[int, Query(le=50)] = 50,
+    offset: int = 0,
+    current_user: User = Depends(require_admin),
+    ):
+    users = session.exec(select(User).offset(offset).limit(limit)).all()
+    if not users:
+        return []
+    return [build_user_read(user) for user in users]
 
 @router.put("/me", response_model=UserRead)
 def update_current_user_profile(
