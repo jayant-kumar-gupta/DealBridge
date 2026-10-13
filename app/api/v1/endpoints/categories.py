@@ -30,7 +30,7 @@ def get_categories(
         session: SessionDep,
         offset: int = 0,
         name: str | None = None,
-        limit: Annotated[int, Query(le=20)] = 20,
+        limit: Annotated[int, Query(le=50)] = 50,
     ) -> list[Category]:
     statement = select(Category)
 
