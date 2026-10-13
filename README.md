@@ -1,4 +1,4 @@
-# DealBridge 🌉
+# DealBridge 
 
 DealBridge is a high-performance, full-stack e-commerce deal discovery and price comparison platform. It aggregates partner offers across major retailers, computes platform-exclusive negotiated deals, and enables a seamless shopping journey with interactive analytics.
 
