@@ -155,8 +155,20 @@
         </nav>
         
         <div class="page-header" style="margin-top: var(--spacing-md);">
-            <h1 style="margin-bottom: var(--spacing-xs);">Search Results for "<span id="page-title-query"></span>"</h1>
+            <h1 id="search-page-title" style="margin-bottom: var(--spacing-xs);">Search Results for "<span id="page-title-query"></span>"</h1>
             <p id="search-count" style="color: var(--color-text-secondary); margin: 0;">0 results found</p>
+        </div>
+
+        <!-- In-Page Product Search Feature -->
+        <div class="product-search-banner" style="margin: var(--spacing-md) 0 var(--spacing-xl); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 10px 14px; display: flex; gap: var(--spacing-sm); align-items: center; box-shadow: var(--shadow-sm);">
+            <div style="position: relative; flex: 1;">
+                <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--color-text-secondary); pointer-events: none; font-size: 1.1rem;">🔍</span>
+                <input type="search" id="inpage-product-search" class="form-input" placeholder="Search across all products, brands, or categories..." style="width: 100%; padding: 10px 38px 10px 42px; border-radius: var(--radius-md); border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text); font-size: 0.95rem;">
+                <button type="button" id="inpage-clear-search-btn" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--color-text-secondary); cursor: pointer; display: none; font-size: 1.1rem;" title="Clear search">✕</button>
+            </div>
+            <button type="button" id="inpage-search-submit" class="btn btn-primary" style="padding: 0 var(--spacing-xl); height: 44px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                Search
+            </button>
         </div>
         
         <div class="layout-sidebar-main">
@@ -169,6 +181,18 @@
                 </div>
                 
                 <form id="filter-form">
+                    <div class="filter-section">
+                        <h3 style="margin-top: 0; margin-bottom: var(--space-xs);">Offers & Deals</h3>
+                        <ul class="filter-list">
+                            <li>
+                                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 6px 8px; background: var(--color-surface-hover); border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
+                                    <input type="checkbox" id="filter-deals-only" name="deals_only">
+                                    <span style="font-weight: 600; color: var(--color-primary); font-size: 0.88rem;">🔥 Discounted Deals Only</span>
+                                </label>
+                            </li>
+                        </ul>
+                    </div>
+
                     <div class="filter-section">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xs);">
                             <h3 style="margin: 0;">Categories</h3>
@@ -194,7 +218,10 @@
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary btn-full" style="margin-top: var(--spacing-md);">Apply Filters</button>
+                    <div style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+                        <button type="submit" class="btn btn-primary" style="flex: 1;">Apply</button>
+                        <button type="button" id="reset-filters-btn" class="btn btn-outline" style="flex: 1;">Reset</button>
+                    </div>
                 </form>
             </aside>
             
@@ -205,6 +232,8 @@
                         <label for="sort-select">Sort by:</label>
                         <select id="sort-select" class="sort-select">
                             <option value="relevance">Relevance</option>
+                            <option value="discount">🔥 Biggest Discount (% Off)</option>
+                            <option value="savings">💰 Highest Savings (₹ Off)</option>
                             <option value="price-low">Price: Low to High</option>
                             <option value="price-high">Price: High to Low</option>
                             <option value="rating">Highest Rated</option>
@@ -226,6 +255,6 @@
         </div>
     </main>
     <footer id="app-footer"></footer>
-    <script type="module" src="/js/pages/search.js?v=2.0"></script>
+    <script type="module" src="/js/pages/search.js?v=2.3"></script>
 </body>
 </html>

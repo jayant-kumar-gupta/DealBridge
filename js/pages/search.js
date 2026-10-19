@@ -4,7 +4,7 @@ import { renderProductGrid } from '../components/product-card.js';
 import { api } from '../utils/api.js';
 import { debounce } from '../utils/helpers.js';
 
-const LIMIT = 48; // Products per page (divisible by 2, 3, and 4 columns)
+const LIMIT = 100; // Products per page (up to backend max limit)
 
 let currentQuery = '';
 let selectedCategoryId = null;
@@ -12,6 +12,7 @@ let selectedBrand = '';
 let minPrice = 0;
 let maxPrice = Infinity;
 let sortOrder = 'relevance';
+let dealsOnly = false;
 
 let currentPage = 1;
 let totalProducts = null; // null if unknown, number if provided by count endpoint
@@ -29,6 +30,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     currentQuery = (params.get('q') || '').trim();
 
+    const dealsParam = params.get('deals') || params.get('deals_only') || params.get('discount_only');
+    if (dealsParam === 'true' || dealsParam === '1') {
+        dealsOnly = true;
+        const dealsCheckbox = document.getElementById('filter-deals-only');
+        if (dealsCheckbox) dealsCheckbox.checked = true;
+    }
+
     const catParam = params.get('category_id') || params.get('category');
     if (catParam) {
         const parsedCat = parseInt(catParam, 10);
@@ -43,9 +51,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sortParam = params.get('sort');
     if (sortParam) {
         sortOrder = sortParam;
-        const sortSelect = document.getElementById('sort-select');
-        if (sortSelect) sortSelect.value = sortOrder;
+    } else if (dealsOnly) {
+        sortOrder = 'discount';
     }
+
+    const sortSelect = document.getElementById('sort-select');
+    if (sortSelect) sortSelect.value = sortOrder;
 
     updateHeaderSearchInputs();
     setupEventListeners();
@@ -60,27 +71,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 function updateHeaderSearchInputs() {
     const headerSearchInputs = document.querySelectorAll('input[type="search"]');
     headerSearchInputs.forEach(input => {
-        if (currentQuery) input.value = currentQuery;
+        if (input.id !== 'category-search-filter') {
+            input.value = currentQuery;
+        }
     });
+
+    const inpageClearBtn = document.getElementById('inpage-clear-search-btn');
+    if (inpageClearBtn) {
+        inpageClearBtn.style.display = currentQuery ? 'inline-block' : 'none';
+    }
 }
 
 function updatePageTitles() {
-    let titleContext = 'All Products';
+    let titleContext = dealsOnly ? '🔥 Biggest Price Drops' : 'All Products';
+    const cat = selectedCategoryId ? allCategories.find(c => c.id === selectedCategoryId) : null;
+    const catName = cat ? cat.name : 'Category';
+
+    const searchPageTitle = document.getElementById('search-page-title');
+
     if (currentQuery && selectedCategoryId) {
-        const cat = allCategories.find(c => c.id === selectedCategoryId);
-        titleContext = `"${currentQuery}" in ${cat ? cat.name : 'Category'}`;
+        titleContext = dealsOnly ? `"${currentQuery}" Deals in ${catName}` : `"${currentQuery}" in ${catName}`;
+        if (searchPageTitle) searchPageTitle.innerHTML = `Search Results for "<span id="page-title-query">${escapeHtml(currentQuery)}</span>" ${dealsOnly ? 'Deals ' : ''}in ${escapeHtml(catName)}`;
     } else if (currentQuery) {
-        titleContext = `"${currentQuery}"`;
+        titleContext = dealsOnly ? `"${currentQuery}" Deals` : `"${currentQuery}"`;
+        if (searchPageTitle) searchPageTitle.innerHTML = `Search Results for "<span id="page-title-query">${escapeHtml(currentQuery)}</span>"${dealsOnly ? ' (Deals Only)' : ''}`;
     } else if (selectedCategoryId) {
-        const cat = allCategories.find(c => c.id === selectedCategoryId);
-        titleContext = cat ? cat.name : 'Selected Category';
+        titleContext = dealsOnly ? `🔥 Biggest Price Drops in ${catName}` : catName;
+        if (searchPageTitle) searchPageTitle.innerHTML = dealsOnly ? `🔥 Biggest Price Drops in ${escapeHtml(catName)}` : `Products in ${escapeHtml(catName)}`;
+    } else {
+        titleContext = dealsOnly ? '🔥 Biggest Price Drops' : 'Explore All Products';
+        if (searchPageTitle) searchPageTitle.innerHTML = dealsOnly ? '🔥 Biggest Price Drops' : 'Explore All Products';
     }
 
     const breadcrumbQuery = document.getElementById('breadcrumb-query');
     if (breadcrumbQuery) breadcrumbQuery.textContent = titleContext;
-
-    const pageTitleQuery = document.getElementById('page-title-query');
-    if (pageTitleQuery) pageTitleQuery.textContent = titleContext;
 
     document.title = `${titleContext} — DealBridge`;
 }
@@ -91,6 +115,14 @@ function updateUrlParams() {
         url.searchParams.set('q', currentQuery);
     } else {
         url.searchParams.delete('q');
+    }
+
+    if (dealsOnly) {
+        url.searchParams.set('deals', 'true');
+    } else {
+        url.searchParams.delete('deals');
+        url.searchParams.delete('deals_only');
+        url.searchParams.delete('discount_only');
     }
 
     if (selectedCategoryId) {
@@ -242,6 +274,24 @@ function setupEventListeners() {
         });
     }
 
+    // Deals Only checkbox toggle
+    const dealsCheckbox = document.getElementById('filter-deals-only');
+    if (dealsCheckbox) {
+        dealsCheckbox.addEventListener('change', async (e) => {
+            dealsOnly = e.target.checked;
+            currentPage = 1;
+            totalProducts = null;
+            if (dealsOnly && sortOrder === 'relevance') {
+                sortOrder = 'discount';
+                const sortSelect = document.getElementById('sort-select');
+                if (sortSelect) sortSelect.value = sortOrder;
+            }
+            updatePageTitles();
+            updateUrlParams();
+            await loadProducts();
+        });
+    }
+
     // Filter Form submit (Price Range and Brands)
     const filterForm = document.getElementById('filter-form');
     if (filterForm) {
@@ -261,6 +311,39 @@ function setupEventListeners() {
                 const sidebar = document.getElementById('filter-sidebar');
                 if (sidebar) sidebar.classList.remove('active');
             }
+        });
+    }
+
+    // Reset Filters Button
+    const resetFiltersBtn = document.getElementById('reset-filters-btn');
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', async () => {
+            selectedCategoryId = null;
+            selectedBrand = '';
+            minPrice = 0;
+            maxPrice = Infinity;
+            dealsOnly = false;
+            sortOrder = 'relevance';
+            currentPage = 1;
+            totalProducts = null;
+
+            const minInput = document.getElementById('price-min');
+            if (minInput) minInput.value = '';
+            const maxInput = document.getElementById('price-max');
+            if (maxInput) maxInput.value = '';
+
+            const brandRadios = document.querySelectorAll('input[name="brand"]');
+            brandRadios.forEach(r => { r.checked = r.value === ''; });
+
+            if (dealsCheckbox) dealsCheckbox.checked = false;
+
+            const sortSelect = document.getElementById('sort-select');
+            if (sortSelect) sortSelect.value = 'relevance';
+
+            renderCategoriesFilter(allCategories);
+            updatePageTitles();
+            updateUrlParams();
+            await loadProducts();
         });
     }
 
@@ -292,6 +375,66 @@ function setupEventListeners() {
             sidebar.classList.remove('active');
         });
     }
+
+    // In-Page Product Search
+    const inpageSearch = document.getElementById('inpage-product-search');
+    const inpageSubmit = document.getElementById('inpage-search-submit');
+    const inpageClearBtn = document.getElementById('inpage-clear-search-btn');
+
+    const executeInpageSearch = (newQuery) => {
+        const query = (newQuery !== undefined ? newQuery : (inpageSearch?.value || '')).trim();
+        currentQuery = query;
+        currentPage = 1;
+        totalProducts = null;
+        if (inpageSearch) inpageSearch.value = currentQuery;
+        updateHeaderSearchInputs();
+        updatePageTitles();
+        updateUrlParams();
+        loadProducts();
+    };
+
+    // Intercept header search form on search page to update query smoothly
+    const headerForm = document.querySelector('.header-search');
+    if (headerForm) {
+        headerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const headerInput = headerForm.querySelector('input[type="search"]');
+            const query = (headerInput?.value || '').trim();
+            executeInpageSearch(query);
+        });
+    }
+
+    if (inpageSubmit) {
+        inpageSubmit.addEventListener('click', () => executeInpageSearch());
+    }
+
+    if (inpageSearch) {
+        inpageSearch.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                executeInpageSearch();
+            }
+        });
+        inpageSearch.addEventListener('input', () => {
+            if (inpageClearBtn) {
+                inpageClearBtn.style.display = inpageSearch.value.trim() ? 'inline-block' : 'none';
+            }
+        });
+    }
+
+    if (inpageClearBtn) {
+        inpageClearBtn.addEventListener('click', () => {
+            if (inpageSearch) inpageSearch.value = '';
+            inpageClearBtn.style.display = 'none';
+            currentQuery = '';
+            currentPage = 1;
+            totalProducts = null;
+            updateHeaderSearchInputs();
+            updatePageTitles();
+            updateUrlParams();
+            loadProducts();
+        });
+    }
 }
 
 // Progressive pagination is used since products count endpoint is not present in backend
@@ -308,41 +451,83 @@ async function loadProducts() {
         resultsContainer.innerHTML = `
             <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; color: var(--color-text-secondary);">
                 <div style="font-size: 2.2rem; margin-bottom: 0.5rem; animation: pulse 1.2s infinite ease-in-out;">📦</div>
-                <div>Loading products from catalog...</div>
+                <div>${dealsOnly ? 'Loading best discounted deals...' : 'Loading products from catalog...'}</div>
             </div>
         `;
     }
 
-    const offset = (currentPage - 1) * LIMIT;
-    let url = `/products/?offset=${offset}&limit=${LIMIT}`;
-    if (currentQuery) {
-        url += `&q=${encodeURIComponent(currentQuery)}`;
-    }
-    if (selectedCategoryId) {
-        url += `&category_id=${selectedCategoryId}`;
-    }
-
     try {
-        const data = await api.get(url);
-        currentProducts = Array.isArray(data) ? data : [];
+        let fetchedProducts = [];
 
-        // If totalProducts not returned from count endpoint, infer dynamically
-        if (totalProducts === null) {
-            if (currentProducts.length < LIMIT) {
-                totalProducts = offset + currentProducts.length;
+        if (dealsOnly) {
+            // When user requests discounted deals only, fetch in batches to find 100 discounted products
+            const batchSize = 100;
+            const batchOffset = (currentPage - 1) * 400; // ~400 catalog products yields ~100 discounted deals
+            const promises = [];
+
+            for (let i = 0; i < 4; i++) {
+                let batchUrl = `/products/?offset=${batchOffset + (i * batchSize)}&limit=${batchSize}`;
+                if (currentQuery) {
+                    const encoded = encodeURIComponent(currentQuery);
+                    batchUrl += `&name=${encoded}&q=${encoded}`;
+                }
+                if (selectedCategoryId) {
+                    batchUrl += `&category_id=${selectedCategoryId}`;
+                }
+                promises.push(api.get(batchUrl).catch(() => []));
+            }
+
+            const batches = await Promise.all(promises);
+            const allItems = batches.flat().filter(Boolean);
+
+            // Filter strictly for products with genuine discount (marked_price > our_deal)
+            const withDiscount = allItems.filter(p => {
+                const deal = p.our_deal != null ? Number(p.our_deal) : null;
+                const marked = p.marked_price != null ? Number(p.marked_price) : null;
+                return deal != null && marked != null && marked > deal;
+            });
+
+            fetchedProducts = withDiscount.slice(0, LIMIT);
+
+            const lastBatch = batches[batches.length - 1] || [];
+            if (lastBatch.length < batchSize || withDiscount.length < LIMIT) {
+                totalProducts = (currentPage - 1) * LIMIT + fetchedProducts.length;
                 totalPages = Math.max(1, Math.ceil(totalProducts / LIMIT));
             } else {
                 totalPages = Math.max(currentPage + 1, totalPages);
             }
         } else {
-            totalPages = Math.max(1, Math.ceil(totalProducts / LIMIT));
+            const offset = (currentPage - 1) * LIMIT;
+            let url = `/products/?offset=${offset}&limit=${LIMIT}`;
+            if (currentQuery) {
+                const encoded = encodeURIComponent(currentQuery);
+                url += `&name=${encoded}&q=${encoded}`;
+            }
+            if (selectedCategoryId) {
+                url += `&category_id=${selectedCategoryId}`;
+            }
+
+            const data = await api.get(url);
+            fetchedProducts = Array.isArray(data) ? data : [];
+
+            // If totalProducts not returned from count endpoint, infer dynamically
+            if (totalProducts === null) {
+                if (fetchedProducts.length < LIMIT) {
+                    totalProducts = offset + fetchedProducts.length;
+                    totalPages = Math.max(1, Math.ceil(totalProducts / LIMIT));
+                } else {
+                    totalPages = Math.max(currentPage + 1, totalPages);
+                }
+            } else {
+                totalPages = Math.max(1, Math.ceil(totalProducts / LIMIT));
+            }
         }
 
+        currentProducts = fetchedProducts;
         updateBrandFilter(currentProducts);
         updatePageTitles();
         applySortingAndRender();
         renderPagination();
-        updateCountBadges(offset);
     } catch (err) {
         console.error('Failed to load products:', err);
         if (resultsContainer) {
@@ -397,30 +582,63 @@ function updateBrandFilter(productsList) {
     brandContainer.innerHTML = html;
 }
 
-function updateCountBadges(offset) {
+function updateCountBadges(offset, itemsLength) {
     const searchCount = document.getElementById('search-count');
     const resultCountLabel = document.getElementById('result-count-label');
 
-    const start = offset + 1;
-    const end = offset + currentProducts.length;
+    const isPriceFiltered = minPrice > 0 || maxPrice < Infinity;
+    const isBrandFiltered = selectedBrand !== '';
+    const isFilterActive = isPriceFiltered || isBrandFiltered;
 
-    if (currentProducts.length === 0) {
-        if (searchCount) searchCount.textContent = '0 products found';
-        if (resultCountLabel) resultCountLabel.textContent = 'Showing 0 results';
+    const actualCount = (itemsLength !== undefined) ? itemsLength : currentProducts.length;
+    const start = actualCount > 0 ? offset + 1 : 0;
+    const end = offset + actualCount;
+
+    const itemLabel = dealsOnly ? 'discounted deal' : 'product';
+    const itemsLabel = dealsOnly ? 'discounted deals' : 'products';
+
+    if (actualCount === 0) {
+        if (isFilterActive) {
+            if (searchCount) searchCount.textContent = `0 matching ${itemsLabel} on Page ${currentPage}`;
+            if (resultCountLabel) resultCountLabel.textContent = `No ${itemsLabel} match your filters (Page ${currentPage})`;
+        } else if (currentQuery) {
+            if (searchCount) searchCount.textContent = `0 ${itemsLabel} found`;
+            if (resultCountLabel) resultCountLabel.textContent = `No ${itemsLabel} found for "${currentQuery}"`;
+        } else {
+            if (searchCount) searchCount.textContent = `0 ${itemsLabel} found`;
+            if (resultCountLabel) resultCountLabel.textContent = 'Showing 0 results';
+        }
+        return;
+    }
+
+    if (isFilterActive) {
+        // When brand or price filter is active, show EXACT count of matching products on this page!
+        if (searchCount) searchCount.textContent = `${actualCount} matching ${actualCount === 1 ? itemLabel : itemsLabel}`;
+        if (resultCountLabel) resultCountLabel.textContent = `Showing ${actualCount} ${actualCount === 1 ? itemLabel : itemsLabel} (Page ${currentPage})`;
         return;
     }
 
     if (totalProducts !== null) {
-        if (searchCount) searchCount.textContent = `${totalProducts} products found`;
-        if (resultCountLabel) resultCountLabel.textContent = `Showing ${start}–${end} of ${totalProducts} products (Page ${currentPage} of ${totalPages})`;
+        if (searchCount) searchCount.textContent = `${totalProducts} ${itemsLabel} found`;
+        if (resultCountLabel) resultCountLabel.textContent = `Showing ${start}–${end} of ${totalProducts} ${itemsLabel} (Page ${currentPage} of ${totalPages})`;
     } else {
-        if (searchCount) searchCount.textContent = `${end}+ products found`;
-        if (resultCountLabel) resultCountLabel.textContent = `Showing ${start}–${end} products (Page ${currentPage})`;
+        const hasMore = currentProducts.length === LIMIT;
+        if (searchCount) searchCount.textContent = `${end}${hasMore ? '+' : ''} ${itemsLabel} found`;
+        if (resultCountLabel) resultCountLabel.textContent = `Showing ${start}–${end}${hasMore ? '+' : ''} ${itemsLabel} (Page ${currentPage})`;
     }
 }
 
 function applySortingAndRender() {
     let items = [...currentProducts];
+
+    // Filter by Deals Only if active
+    if (dealsOnly) {
+        items = items.filter(p => {
+            const deal = p.our_deal != null ? Number(p.our_deal) : null;
+            const marked = p.marked_price != null ? Number(p.marked_price) : null;
+            return deal != null && marked != null && marked > deal;
+        });
+    }
 
     // Filter by Brand if selected
     if (selectedBrand) {
@@ -430,23 +648,57 @@ function applySortingAndRender() {
     // Filter by Price range if specified
     if (minPrice > 0 || maxPrice < Infinity) {
         items = items.filter(p => {
-            const price = p.our_deal ?? 0;
+            const price = p.our_deal != null ? Number(p.our_deal) : (p.marked_price != null ? Number(p.marked_price) : 0);
             return price >= minPrice && price <= maxPrice;
         });
     }
 
     // Apply Sorting
-    if (sortOrder === 'price-low') {
-        items.sort((a, b) => (a.our_deal ?? 0) - (b.our_deal ?? 0));
+    if (sortOrder === 'discount') {
+        items.sort((a, b) => {
+            const getDisc = (p) => {
+                const deal = p.our_deal != null ? Number(p.our_deal) : null;
+                const marked = p.marked_price != null ? Number(p.marked_price) : null;
+                return (deal != null && marked != null && marked > deal)
+                    ? ((marked - deal) / marked)
+                    : -1;
+            };
+            return getDisc(b) - getDisc(a);
+        });
+    } else if (sortOrder === 'savings') {
+        items.sort((a, b) => {
+            const getSavings = (p) => {
+                const deal = p.our_deal != null ? Number(p.our_deal) : null;
+                const marked = p.marked_price != null ? Number(p.marked_price) : null;
+                return (deal != null && marked != null && marked > deal)
+                    ? (marked - deal)
+                    : -1;
+            };
+            return getSavings(b) - getSavings(a);
+        });
+    } else if (sortOrder === 'price-low') {
+        items.sort((a, b) => {
+            const priceA = a.our_deal != null ? Number(a.our_deal) : (a.marked_price != null ? Number(a.marked_price) : 0);
+            const priceB = b.our_deal != null ? Number(b.our_deal) : (b.marked_price != null ? Number(b.marked_price) : 0);
+            return priceA - priceB;
+        });
     } else if (sortOrder === 'price-high') {
-        items.sort((a, b) => (b.our_deal ?? 0) - (a.our_deal ?? 0));
+        items.sort((a, b) => {
+            const priceA = a.our_deal != null ? Number(a.our_deal) : (a.marked_price != null ? Number(a.marked_price) : 0);
+            const priceB = b.our_deal != null ? Number(b.our_deal) : (b.marked_price != null ? Number(b.marked_price) : 0);
+            return priceB - priceA;
+        });
     } else if (sortOrder === 'rating') {
-        items.sort((a, b) => (b.avg_rating ?? 0) - (a.avg_rating ?? 0));
+        items.sort((a, b) => (Number(b.avg_rating) || 0) - (Number(a.avg_rating) || 0));
     } else if (sortOrder === 'name-asc') {
         items.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     } else if (sortOrder === 'name-desc') {
         items.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
     }
+
+    // Update count badges with exact count of filtered items
+    const offset = (currentPage - 1) * LIMIT;
+    updateCountBadges(offset, items.length);
 
     const container = document.getElementById('search-results');
     if (!container) return;
@@ -455,11 +707,13 @@ function applySortingAndRender() {
         container.innerHTML = `
             <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; background: var(--color-surface); border: 1px dashed var(--color-border); border-radius: var(--radius-lg);">
                 <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
-                <h3>No matching products found</h3>
+                <h3>No matching ${dealsOnly ? 'discounted deals' : 'products'} found</h3>
                 <p style="color: var(--color-text-secondary); margin-bottom: 1rem;">
-                    Try adjusting your filters, clearing the search query, or selecting a different category.
+                    ${dealsOnly 
+                        ? 'No discounted deals matched your current filters or query. Try adjusting filters or viewing all products.' 
+                        : 'Try adjusting your filters, clearing the search query, or selecting a different category.'}
                 </p>
-                ${(currentQuery || selectedCategoryId || selectedBrand) ? `
+                ${(currentQuery || selectedCategoryId || selectedBrand || minPrice > 0 || maxPrice < Infinity || dealsOnly) ? `
                     <button class="btn btn-secondary btn-sm" id="reset-all-filters-btn">Reset All Filters</button>
                 ` : ''}
             </div>
@@ -467,17 +721,25 @@ function applySortingAndRender() {
         const resetBtn = document.getElementById('reset-all-filters-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                currentQuery = '';
-                selectedCategoryId = null;
-                selectedBrand = '';
-                minPrice = 0;
-                maxPrice = Infinity;
-                currentPage = 1;
-                totalProducts = null;
-                updatePageTitles();
-                updateUrlParams();
-                renderCategoriesFilter(allCategories);
-                loadProducts();
+                const sidebarReset = document.getElementById('reset-filters-btn');
+                if (sidebarReset) {
+                    sidebarReset.click();
+                } else {
+                    currentQuery = '';
+                    selectedCategoryId = null;
+                    selectedBrand = '';
+                    minPrice = 0;
+                    maxPrice = Infinity;
+                    dealsOnly = false;
+                    sortOrder = 'relevance';
+                    currentPage = 1;
+                    totalProducts = null;
+                    updateHeaderSearchInputs();
+                    updatePageTitles();
+                    updateUrlParams();
+                    renderCategoriesFilter(allCategories);
+                    loadProducts();
+                }
             });
         }
         return;

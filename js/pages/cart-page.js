@@ -57,7 +57,8 @@ function renderCart() {
         const brand = item.brand || '';
         const price = Number(item.price ?? item.our_deal ?? item.ourPrice ?? 0);
         const quantity = Number(item.quantity) || 1;
-        const originalPrice = Number(item.original_price ?? (price ? Math.round((price * 50 / 49) * 100) / 100 : 0));
+        const markedPrice = item.marked_price != null ? Number(item.marked_price) : (item.original_price != null ? Number(item.original_price) : null);
+        const originalPrice = markedPrice != null && markedPrice > price ? markedPrice : price;
         const unitSavings = item.savings != null ? Number(item.savings) : Math.max(0, originalPrice - price);
         const lineSavings = unitSavings * quantity;
         const lineTotal = price * quantity;

@@ -53,7 +53,7 @@ function setupEvents() {
 async function loadData() {
     const tbody = document.getElementById('prices-table-body');
     if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;" class="text-secondary">Loading prices...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem;" class="text-secondary">Loading prices...</td></tr>';
     }
 
     try {
@@ -74,7 +74,7 @@ async function loadData() {
     } catch (err) {
         console.error('Failed to load prices data:', err);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem;" class="text-error">Failed to load prices: ${err.message || 'Error'}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 2rem;" class="text-error">Failed to load prices: ${err.message || 'Error'}</td></tr>`;
         }
         showToast(err.message || 'Failed to load prices', 'error');
     }
@@ -146,7 +146,7 @@ function renderTable() {
     if (filtered.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="admin-empty" style="text-align: center; padding: 2.5rem; color: var(--color-text-secondary);">
+                <td colspan="8" class="admin-empty" style="text-align: center; padding: 2.5rem; color: var(--color-text-secondary);">
                     ${partnerPrices.length === 0 ? 'No partner prices found. Click "+ Add Partner Price" to create one.' : 'No partner prices match your filters.'}
                 </td>
             </tr>
@@ -170,6 +170,14 @@ function renderTable() {
         const ourDealDisplay = (prod && prod.our_deal != null)
             ? `<strong style="color: var(--color-deal); font-size: 1.05rem;">${formatPrice(prod.our_deal)}</strong>`
             : '<span style="color: var(--color-text-secondary); font-style: italic;">No deal yet</span>';
+
+        const markedPrice = pp.marked_price != null ? Number(pp.marked_price) : null;
+        const markedDisplay = markedPrice
+            ? `<div>
+                <span style="color: var(--color-text-secondary); text-decoration: line-through; font-size: 0.92rem;">${formatPrice(markedPrice)}</span>
+                ${markedPrice > pp.partner_price ? `<br><small style="color: var(--color-deal); font-weight: 600; font-size: 0.76rem;">${Math.round(((markedPrice - pp.partner_price) / markedPrice) * 100)}% off</small>` : ''}
+               </div>`
+            : '<span style="color: var(--color-text-secondary); font-style: italic; font-size: 0.85rem;">None</span>';
 
         const urlDisplay = pp.partner_product_url
             ? `<a href="${pp.partner_product_url.startsWith('http') ? pp.partner_product_url : 'https://' + pp.partner_product_url}" target="_blank" rel="noopener noreferrer" style="color: var(--color-primary); text-decoration: underline; font-size: 0.85rem;">Visit ↗</a>`
@@ -199,6 +207,7 @@ function renderTable() {
                 <td>
                     <span style="font-weight: 600; font-size: 1rem; color: var(--color-text);">${formatPrice(pp.partner_price)}</span>
                 </td>
+                <td>${markedDisplay}</td>
                 <td>${ourDealDisplay}</td>
                 <td>${stockDisplay}</td>
                 <td>${urlDisplay}</td>
@@ -304,14 +313,21 @@ function openPriceModal(priceRecord = null) {
                 </div>
 
                 <div class="form-group">
-                    <label for="price-stock" class="form-label">Stock Count</label>
-                    <input type="number" id="price-stock" class="form-input" min="0" step="1" placeholder="e.g. 25" value="${priceRecord ? priceRecord.stock_count : '10'}">
+                    <label for="price-marked" class="form-label">Marked Price / MRP (₹)</label>
+                    <input type="number" id="price-marked" class="form-input" min="0" step="0.01" placeholder="e.g. 29999.00" value="${priceRecord?.marked_price != null ? priceRecord.marked_price : ''}">
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="price-url" class="form-label">Partner Product URL</label>
-                <input type="text" id="price-url" class="form-input" placeholder="e.g. https://www.amazon.in/dp/example" value="${priceRecord?.partner_product_url || ''}">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
+                <div class="form-group">
+                    <label for="price-stock" class="form-label">Stock Count</label>
+                    <input type="number" id="price-stock" class="form-input" min="0" step="1" placeholder="e.g. 25" value="${priceRecord ? priceRecord.stock_count : '10'}">
+                </div>
+
+                <div class="form-group">
+                    <label for="price-url" class="form-label">Partner Product URL</label>
+                    <input type="text" id="price-url" class="form-input" placeholder="e.g. https://www.amazon.in/dp/example" value="${priceRecord?.partner_product_url || ''}">
+                </div>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: var(--space-sm); margin-top: var(--space-md); padding-top: var(--space-sm); border-top: 1px solid var(--color-border);">
@@ -340,6 +356,8 @@ function openPriceModal(priceRecord = null) {
         const productId = isEdit ? priceRecord.product_id : parseInt(document.getElementById('price-product-select').value, 10);
         const partnerId = isEdit ? priceRecord.partner_id : parseInt(document.getElementById('price-partner-select').value, 10);
         const partner_price = parseFloat(document.getElementById('price-amount').value);
+        const markedRaw = document.getElementById('price-marked').value;
+        const marked_price = markedRaw && !isNaN(parseFloat(markedRaw)) ? parseFloat(markedRaw) : null;
         const stock_count = parseInt(document.getElementById('price-stock').value, 10) || 0;
         const partner_product_url = document.getElementById('price-url').value.trim() || null;
 
@@ -361,6 +379,7 @@ function openPriceModal(priceRecord = null) {
             product_id: productId,
             partner_id: partnerId,
             partner_price,
+            marked_price,
             stock_count,
             partner_product_url,
             date: new Date().toISOString()

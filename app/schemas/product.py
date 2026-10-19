@@ -19,6 +19,7 @@ class ProductCreate(ProductBase):
 class ProductRead(ProductBase):
     id: int
     our_deal: float | None = None
+    marked_price: float | None = None
     avg_rating: float
     rating_count: int
 

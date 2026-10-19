@@ -4,14 +4,19 @@ import { toggleWishlist, isInWishlist } from '../state/wishlist.js?v=2.0';
 import { showToast } from './toast.js';
 
 export function renderProductCard(product) {
-  const ourDeal = product.our_deal ?? product.ourPrice ?? null;
-  const originalPrice = ourDeal ? ourDeal * 50 / 49 : null;
-  const savings = ourDeal ? originalPrice - ourDeal : null;
+  const ourDeal = product.our_deal != null ? Number(product.our_deal) : (product.ourPrice != null ? Number(product.ourPrice) : null);
+  const markedPrice = product.marked_price != null ? Number(product.marked_price) : null;
+  const hasDiscount = markedPrice != null && ourDeal != null && markedPrice > ourDeal;
+  const originalPrice = hasDiscount ? markedPrice : null;
+  const savings = hasDiscount ? (markedPrice - ourDeal) : null;
+  const discountPercent = hasDiscount ? Math.round(((markedPrice - ourDeal) / markedPrice) * 100) : null;
+
   const inWishlist = isInWishlist(product.id);
   const inCart = isInCart(product.id);
   const avgRating = product.avg_rating ?? product.rating ?? 0;
   const ratingCount = product.rating_count ?? product.reviewCount ?? 0;
   const formattedRating = avgRating ? Math.round(Number(avgRating) * 100) / 100 : 0;
+
   let imagePath = product.image_path || product.image || '/assets/images/placeholder.jpg';
   if (imagePath && !imagePath.startsWith('/') && !imagePath.startsWith('http')) {
     imagePath = '/' + imagePath;
@@ -24,7 +29,7 @@ export function renderProductCard(product) {
       ${inWishlist ? '&#10084;' : '&#9825;'}
     </button>
     <a href="/product.html?id=${product.id}" class="product-card__image">
-      <img src="${imagePath}" alt="${product.name}" loading="lazy" width="300" height="300">
+      <img src="${imagePath}" alt="${product.name}" loading="lazy" width="300" height="300" onerror="this.src='/assets/images/placeholder.jpg'">
     </a>
     <div class="product-card__body">
       <a href="/product.html?id=${product.id}" class="product-card__name">${product.name}</a>
@@ -34,15 +39,16 @@ export function renderProductCard(product) {
         <span>${formattedRating}</span>
         <span class="product-card__review-count">(${ratingCount.toLocaleString()})</span>
       </div>
-      ${ourDeal
+      ${ourDeal != null
       ?
       `<div class="product-card__pricing">
-        <span class="product-card__original-price">${formatPrice(originalPrice)}</span>
+        ${originalPrice ? `<span class="product-card__original-price">${formatPrice(originalPrice)}</span>` : ''}
         <span class="product-card__price">${formatPrice(ourDeal)}</span>
-        <span class="product-card__savings">Save ${formatPrice(savings)}</span>
-        </div>`
+        ${discountPercent ? `<span class="badge badge-discount" style="font-size: 0.72rem; padding: 2px 6px; font-weight: 600;">${discountPercent}% OFF</span>` : ''}
+        ${savings ? `<span class="product-card__savings">Save ${formatPrice(savings)}</span>` : ''}
+      </div>`
       : `<div class="product-card__pricing">
-        <span class="product-card__price">Price Not Available</span>
+        <span class="product-card__price" style="color: var(--color-text-secondary); font-size: 0.95rem;">Price Not Available</span>
       </div>`
     }
     <div class="product-card__actions">
@@ -71,16 +77,18 @@ export function renderProductCard(product) {
     addCartBtn.addEventListener('click', (e) => {
       e.preventDefault();
       if (!isInCart(product.id)) {
-        const unitPrice = product.our_deal || product.ourPrice || 0;
-        const origPrice = unitPrice ? Math.round((unitPrice * 50 / 49) * 100) / 100 : 0;
+        const unitPrice = ourDeal != null ? ourDeal : 0;
+        const origPrice = markedPrice != null && markedPrice > unitPrice ? markedPrice : unitPrice;
+        const actualSavings = Math.max(0, origPrice - unitPrice);
         addToCart(product.id, 1, {
           name: product.name,
           brand: product.brand,
           price: unitPrice,
           ourPrice: unitPrice,
           our_deal: unitPrice,
+          marked_price: markedPrice,
           original_price: origPrice,
-          savings: Math.max(0, origPrice - unitPrice),
+          savings: actualSavings,
           image: product.image_path,
           image_path: product.image_path,
         });

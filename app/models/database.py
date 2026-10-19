@@ -49,6 +49,7 @@ class PartnerPrice(SQLModel, table = True):
     product_id: int | None = Field(default = None, foreign_key="product.id", ondelete="CASCADE", primary_key=True)
     partner_id: int | None = Field(default=None, foreign_key="partner.id", ondelete="CASCADE", primary_key=True)
     partner_price: float = Field()
+    marked_price: float | None = Field(default = None)
     stock_count: int | None = Field(default=0, sa_column_kwargs={"server_default": "0"}) # to help with the stocks (to find out whether the product is in stock or not (for one partner))
     partner_product_url: str | None = Field(default=None)
     date: datetime | None = Field(default_factory=lambda: datetime.now(timezone.utc), sa_column_kwargs={"server_default": text("now()")})
@@ -85,7 +86,8 @@ class Product(SQLModel, table = True):
     description: str | None = Field(default=None)
     short_describe: str | None = Field(default=None)
     image_path: str | None = Field(default=None)
-    our_deal: float | None = Field(default = None) # Formed by applying discount on the mininum price
+    our_deal: float | None = Field(default = None)
+    marked_price: float | None = Field(default = None)
     avg_rating: float = Field(default=0.0, sa_column_kwargs={"server_default": "0.0"}) # Updated only when new user gives rating
     rating_count: int = Field(default=0, sa_column_kwargs={"server_default": "0"}) # Updated only when new user gives rating
 

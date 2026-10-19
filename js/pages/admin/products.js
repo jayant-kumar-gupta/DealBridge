@@ -42,7 +42,7 @@ function setupEvents() {
 async function loadData() {
     const tbody = document.getElementById('products-table-body');
     if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;" class="text-secondary">Loading products...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem;" class="text-secondary">Loading products...</td></tr>';
     }
 
     try {
@@ -61,7 +61,7 @@ async function loadData() {
     } catch (err) {
         console.error('Failed to load products data:', err);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem;" class="text-error">Failed to load products: ${err.message || 'Error'}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2rem;" class="text-error">Failed to load products: ${err.message || 'Error'}</td></tr>`;
         }
         showToast(err.message || 'Failed to load products', 'error');
     }
@@ -107,7 +107,7 @@ function renderTable() {
     if (filtered.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="admin-empty" style="text-align: center; padding: 2.5rem; color: var(--color-text-secondary);">
+                <td colspan="9" class="admin-empty" style="text-align: center; padding: 2.5rem; color: var(--color-text-secondary);">
                     ${products.length === 0 ? 'No products found. Click "+ Add Product" to create one.' : 'No products match your filters.'}
                 </td>
             </tr>
@@ -131,9 +131,29 @@ function renderTable() {
             stockBadge = '<span style="color: var(--color-error); font-weight: 600; font-size: 0.85rem;">Out of Stock</span>';
         }
 
-        const dealDisplay = product.our_deal != null
-            ? `<strong style="color: var(--color-deal); font-size: 1.05rem;">${formatPrice(product.our_deal)}</strong>`
+        const markedPrice = product.marked_price != null ? Number(product.marked_price) : null;
+        const ourDeal = product.our_deal != null ? Number(product.our_deal) : null;
+        const hasDiscount = markedPrice != null && ourDeal != null && markedPrice > ourDeal;
+        const discountPercent = hasDiscount ? Math.round(((markedPrice - ourDeal) / markedPrice) * 100) : 0;
+
+        const dealDisplay = ourDeal != null
+            ? `<div>
+                <strong style="color: var(--color-deal); font-size: 1.05rem;">${formatPrice(ourDeal)}</strong>
+                ${hasDiscount ? `<br><small style="color: var(--color-deal); font-weight: 600; font-size: 0.76rem;">${discountPercent}% OFF</small>` : ''}
+               </div>`
             : '<span style="color: var(--color-text-secondary); font-style: italic; font-size: 0.85rem;">No deal yet</span>';
+
+        const markedDisplay = markedPrice != null
+            ? `<span style="color: var(--color-text-secondary); text-decoration: line-through; font-size: 0.92rem;">${formatPrice(markedPrice)}</span>`
+            : '<span style="color: var(--color-text-secondary); font-style: italic; font-size: 0.85rem;">None</span>';
+
+        const ratingDisplay = (product.rating_count || 0) > 0
+            ? `<div style="display: flex; align-items: center; gap: 4px; font-size: 0.88rem;">
+                <span style="color: var(--color-accent); font-size: 0.95rem;">★</span>
+                <strong>${Number(product.avg_rating || 0).toFixed(1)}</strong>
+                <small style="color: var(--color-text-secondary);">(${product.rating_count})</small>
+               </div>`
+            : '<span style="color: var(--color-text-secondary); font-size: 0.82rem;">No ratings</span>';
 
         let imageSrc = product.image_path || '/assets/images/placeholder.jpg';
         if (imageSrc && !imageSrc.startsWith('/') && !imageSrc.startsWith('http')) {
@@ -154,6 +174,8 @@ function renderTable() {
                     <span class="badge" style="background: var(--color-bg); font-weight: 500;">${catDisplay}</span>
                 </td>
                 <td>${dealDisplay}</td>
+                <td>${markedDisplay}</td>
+                <td>${ratingDisplay}</td>
                 <td>${stockBadge}</td>
                 <td style="text-align: right;">
                     <div class="table-actions" style="justify-content: flex-end;">

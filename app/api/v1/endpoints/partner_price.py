@@ -1,36 +1,40 @@
 from fastapi import APIRouter, status, HTTPException, Response, Depends
 from typing import List
 from app.core.database import SessionDep
-from sqlmodel import select, func
+from sqlmodel import select
 from datetime import datetime, timezone
 from app.models.database import User, PartnerPrice, Product, Partner, ProductPriceHistory
 from app.api.v1.endpoints.user_auth import require_admin
 
 router = APIRouter(prefix="/partner-prices", tags=["Partner Price"])
 
-def sync_product_our_deal(session, product_id: int):
+def sync_product_table(session, product_id: int):
     product = session.get(Product, product_id)
 
     if not product: 
         return
-    
-    min_price = session.exec(select(func.min(PartnerPrice.partner_price)).where(PartnerPrice.product_id == product_id)).one()
-    new_deal = round(min_price * 0.98, 2) if min_price is not None else None
 
-    if product.our_deal == new_deal:
-        return
+    cheapest_price = session.exec(select(PartnerPrice)
+                                  .where(PartnerPrice.product_id == product.id)
+                                  .order_by(PartnerPrice.partner_price.asc())
+                                  ).first()
 
-    product.our_deal = new_deal
+    if not cheapest_price:
+        product.our_deal = None
+        product.marked_price = None
+    else:
+        product.our_deal = cheapest_price.partner_price
+        product.marked_price = cheapest_price.marked_price
 
-    session.add(product)
-    if new_deal is not None:
         session.add(
             ProductPriceHistory(
+                partner_id=cheapest_price.partner_id,
                 product_id=product_id,
                 date=datetime.now(timezone.utc),
-                price=new_deal,
+                price=cheapest_price.partner_price,
             )
         )
+    session.add(product)
 
 # Create Partner_Price
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=PartnerPrice)
@@ -60,7 +64,7 @@ def create_price(detail: PartnerPrice, session: SessionDep, current_user: User =
     session.add(detail)
     session.flush() # Make the new price visible in the current transaction
 
-    sync_product_our_deal(session, detail.product_id)
+    sync_product_table(session, detail.product_id)
 
     session.commit()
     session.refresh(detail)
@@ -93,7 +97,7 @@ def delete_price(session: SessionDep, product_id: int, partner_id: int, current_
 
     session.delete(price)
     session.flush()
-    sync_product_our_deal(session, product_id)
+    sync_product_table(session, product_id)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -116,15 +120,16 @@ def update_price(detail: PartnerPrice, session: SessionDep, product_id: int, par
     price.partner_id = detail.partner_id
     price.product_id = detail.product_id
     price.partner_price = detail.partner_price
+    price.marked_price = detail.marked_price
     price.stock_count = detail.stock_count
     price.partner_product_url = detail.partner_product_url
     price.date = datetime.now(timezone.utc)
 
     session.add(price)
     session.flush()
-    sync_product_our_deal(session, product_id)
+    sync_product_table(session, product_id)
     if detail.product_id != product_id:
-        sync_product_our_deal(session, detail.product_id)
+        sync_product_table(session, detail.product_id)
     session.commit()
     session.refresh(price)
 

@@ -25,8 +25,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     try {
-        const [productDetail, partners, categories] = await Promise.all([
+        const [productDetail, partnerPricesData, partners, categories] = await Promise.all([
             api.get(`/products/${productId}`),
+            api.get(`/partner-prices/${productId}`).catch(() => []),
             api.get('/partners/').catch(() => []),
             api.get('/categories/').catch(() => []),
         ]);
@@ -38,6 +39,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         currentProduct = productDetail.product_info;
         currentProductDetail = productDetail;
+        currentProductDetail.partner_prices = Array.isArray(partnerPricesData) && partnerPricesData.length > 0
+            ? partnerPricesData
+            : (productDetail.partner_prices || []);
 
         const partnerMap = new Map((partners || []).map(p => [p.id, p]));
         const currentCategory = (categories || []).find(c => c.id === currentProduct.category_id);
@@ -105,19 +109,23 @@ function populateProductDetails(productDetail, categoryName) {
     }
     
     // Pricing
-    const ourPrice = p.our_deal || 0;
-    const originalPrice = ourPrice ? Math.round(ourPrice * 50 / 49) : 0;
-    const discountPercent = originalPrice > ourPrice 
-        ? Math.round(((originalPrice - ourPrice) / originalPrice) * 100) 
+    const ourPrice = p.our_deal != null ? Number(p.our_deal) : 0;
+    const markedPrice = p.marked_price != null ? Number(p.marked_price) : 0;
+    const hasDiscount = markedPrice > ourPrice && ourPrice > 0;
+    const originalPrice = hasDiscount ? markedPrice : 0;
+    const discountPercent = hasDiscount 
+        ? Math.round(((markedPrice - ourPrice) / markedPrice) * 100) 
         : 0;
     
     const prodPriceEl = document.getElementById('prod-price');
-    if (prodPriceEl) prodPriceEl.textContent = formatPrice(ourPrice);
+    if (prodPriceEl) {
+        prodPriceEl.textContent = ourPrice > 0 ? formatPrice(ourPrice) : 'Price Not Available';
+    }
     
     const prodOrigEl = document.getElementById('prod-original');
     const prodDiscEl = document.getElementById('prod-discount');
     if (prodOrigEl && prodDiscEl) {
-        if (originalPrice > ourPrice) {
+        if (hasDiscount) {
             prodOrigEl.textContent = formatPrice(originalPrice);
             prodOrigEl.style.display = 'inline';
             prodDiscEl.textContent = `${discountPercent}% OFF`;
@@ -130,7 +138,7 @@ function populateProductDetails(productDetail, categoryName) {
     
     const prodSavingsEl = document.getElementById('prod-savings');
     if (prodSavingsEl) {
-        if (originalPrice > ourPrice) {
+        if (hasDiscount) {
             const savings = originalPrice - ourPrice;
             prodSavingsEl.textContent = `You save ${formatPrice(savings)} by choosing DealBridge`;
             prodSavingsEl.style.display = 'block';
@@ -243,16 +251,19 @@ function setupActions() {
         addCartBtn.addEventListener('click', async () => {
             if (!currentProduct) return;
             const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
-            const unitPrice = currentProduct.our_deal || 0;
-            const origPrice = unitPrice ? Math.round((unitPrice * 50 / 49) * 100) / 100 : 0;
+            const unitPrice = currentProduct.our_deal != null ? Number(currentProduct.our_deal) : 0;
+            const markedPrice = currentProduct.marked_price != null ? Number(currentProduct.marked_price) : null;
+            const origPrice = markedPrice != null && markedPrice > unitPrice ? markedPrice : unitPrice;
+            const savings = Math.max(0, origPrice - unitPrice);
             await addToCart(currentProduct.id, qty, {
                 name: currentProduct.name,
                 brand: currentProduct.brand,
                 price: unitPrice,
                 ourPrice: unitPrice,
                 our_deal: unitPrice,
+                marked_price: markedPrice,
                 original_price: origPrice,
-                savings: Math.max(0, origPrice - unitPrice),
+                savings: savings,
                 image: currentProduct.image_path,
                 image_path: currentProduct.image_path,
             });
@@ -265,16 +276,19 @@ function setupActions() {
         buyNowBtn.addEventListener('click', async () => {
             if (!currentProduct) return;
             const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
-            const unitPrice = currentProduct.our_deal || 0;
-            const origPrice = unitPrice ? Math.round((unitPrice * 50 / 49) * 100) / 100 : 0;
+            const unitPrice = currentProduct.our_deal != null ? Number(currentProduct.our_deal) : 0;
+            const markedPrice = currentProduct.marked_price != null ? Number(currentProduct.marked_price) : null;
+            const origPrice = markedPrice != null && markedPrice > unitPrice ? markedPrice : unitPrice;
+            const savings = Math.max(0, origPrice - unitPrice);
             await addToCart(currentProduct.id, qty, {
                 name: currentProduct.name,
                 brand: currentProduct.brand,
                 price: unitPrice,
                 ourPrice: unitPrice,
                 our_deal: unitPrice,
+                marked_price: markedPrice,
                 original_price: origPrice,
-                savings: Math.max(0, origPrice - unitPrice),
+                savings: savings,
                 image: currentProduct.image_path,
                 image_path: currentProduct.image_path,
             });
@@ -298,6 +312,8 @@ function setupActions() {
         });
     }
 }
+
+
 
 
 

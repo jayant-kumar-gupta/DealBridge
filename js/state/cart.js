@@ -12,6 +12,11 @@ function getActiveCartKey() {
  * Normalizes cart item from backend into frontend cart item representation.
  */
 function normalizeBackendItem(item) {
+  const price = item.price != null ? Number(item.price) : 0;
+  const markedPrice = item.marked_price != null ? Number(item.marked_price) : (item.original_price != null ? Number(item.original_price) : null);
+  const originalPrice = markedPrice != null && markedPrice > price ? markedPrice : price;
+  const savings = item.savings != null ? Number(item.savings) : Math.max(0, originalPrice - price);
+
   return {
     productId: item.product_id,
     quantity: item.quantity,
@@ -20,11 +25,12 @@ function normalizeBackendItem(item) {
     brand: item.brand,
     image_path: item.image_path,
     image: item.image_path,
-    price: item.price,
-    our_deal: item.price,
-    ourPrice: item.price,
-    original_price: item.original_price,
-    savings: item.savings,
+    price: price,
+    our_deal: price,
+    ourPrice: price,
+    marked_price: markedPrice,
+    original_price: originalPrice,
+    savings: savings,
     partner_name: item.partner_name,
     partner_color: item.partner_color,
   };
@@ -246,8 +252,11 @@ export function getCartSavings() {
     if (item.savings != null) {
       return savings + (Number(item.savings) * qty);
     }
-    const originalPrice = Number(item.original_price ?? (price * 50 / 49));
-    return savings + Math.max(0, (originalPrice - price) * qty);
+    const markedPrice = item.marked_price != null ? Number(item.marked_price) : (item.original_price != null ? Number(item.original_price) : null);
+    if (markedPrice != null && markedPrice > price) {
+      return savings + ((markedPrice - price) * qty);
+    }
+    return savings;
   }, 0);
 }
 

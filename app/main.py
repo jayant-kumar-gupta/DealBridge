@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.database import create_db_and_tables
 from contextlib import asynccontextmanager
 from app.api.v1.endpoints import categories, user_auth, products, partners, partner_price, ratings_reviews, carts, orders, addresses, product_spec, tags, product_tags, price_history, seed_database
 from fastapi.staticfiles import StaticFiles
@@ -8,7 +7,6 @@ from fastapi.staticfiles import StaticFiles
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Runs before the app starts accepting requests
-    create_db_and_tables()
     yield
     # Code here runs when the app is shutting down (clean up)
 
