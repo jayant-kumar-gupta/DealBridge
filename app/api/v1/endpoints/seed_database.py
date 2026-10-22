@@ -19,12 +19,13 @@ async def seed_categories_by_file(file: UploadFile, session: SessionDep,current_
     count = 0 # Counts the number of insertions in database
     skipped = 0 # Counts number of failed insertions
     for row in reader:
-        cat_name = row["category_name"].strip()
-        existing = session.exec(select(Category).where(Category.name == cat_name)).first()
+        cat_id = int(row["id"])
+        existing = session.get(Category, cat_id)
         if existing:
             skipped += 1
             continue
         category = Category(
+            id = cat_id,
             name=row["category_name"],
             icon = row["icon"],
             slug=slugify(row["category_name"]),
