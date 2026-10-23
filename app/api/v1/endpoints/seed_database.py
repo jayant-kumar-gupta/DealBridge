@@ -12,18 +12,24 @@ router = APIRouter(prefix="/seed", tags=["Seed Database"])
 
 # Seed Categories
 @router.post("/l-file-categories")
-async def seed_categories_by_file(file: UploadFile, session: SessionDep,current_user: User = Depends(require_admin)):
-    contents = await file.read()
+def seed_categories_by_file(file: UploadFile, session: SessionDep,current_user: User = Depends(require_admin)):
+    contents = file.file.read()
     decoded_content = contents.decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(decoded_content))
+
+    # Fetch all existing category IDs in ONE single query (takes ~150ms)
+    existing_ids = set(session.exec(select(Category.id)).all())
+
     count = 0 # Counts the number of insertions in database
     skipped = 0 # Counts number of failed insertions
     for row in reader:
         cat_id = int(row["id"])
-        existing = session.get(Category, cat_id)
-        if existing:
+
+        # Check in memory (instant)
+        if cat_id in existing_ids:
             skipped += 1
             continue
+
         category = Category(
             id = cat_id,
             name=row["category_name"],
@@ -38,20 +44,27 @@ async def seed_categories_by_file(file: UploadFile, session: SessionDep,current_
 
 
 # Seed Products
-@router.post("l-file-categories")
-async def seed_products_by_file(file: UploadFile, session: SessionDep, current_user: User = Depends(require_admin)):
-    contents = await file.read()
+@router.post("/l-file-products")
+def seed_products_by_file(file: UploadFile, session: SessionDep, current_user: User = Depends(require_admin)):
+    session.expire_on_commit = False # Prevents SQLModel from expiring products_map on session.commit()
+    contents = file.file.read()
     decoded_content = contents.decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(decoded_content))
+
+    existing_ids = set(session.exec(select(Product.id)).all())
+
+    existing_category_ids = set(session.exec(select(Category.id)).all())
+
     count = 0
     skipped = 0
     for row in reader:
         product_id = int(row["id"])
-        existing = session.get(Product, product_id)
-        if existing:
+        if product_id in existing_ids:
             skipped += 1
             continue
-        if int(row["category_id"]) > 248:
+
+        # checks if product has valid category id in database
+        if int(row["category_id"]) not in existing_category_ids:
             skipped +=1
             continue
 
@@ -64,44 +77,67 @@ async def seed_products_by_file(file: UploadFile, session: SessionDep, current_u
             brand=row["brand"] if row["brand"] else None,
         )
         session.add(product)
+        existing_ids.add(product_id)
         count += 1
+
+        # Batch commit to reduce memory overhead and save time
+        if count % 2000 == 0:
+            session.commit()
 
     session.commit()
     return {"message": "Products uploaded successfully", "insert_count": count, "skipped": skipped}
 
 # Seed Product price for partner #Amazon
-@router.post("l-file-partner-price-amazon")
-async def seed_partner_price_amazon(file: UploadFile, session: SessionDep, current_user: User = Depends(require_admin)):
-    contents = await file.read()
+@router.post("/l-file-partner-price-amazon")
+def seed_partner_price_amazon(file: UploadFile, session: SessionDep, current_user: User = Depends(require_admin)):
+    session.expire_on_commit = False # Prevents SQLModel from expiring products_map on session.commit()
+    contents = file.file.read()
     decoded_content = contents.decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(decoded_content))
+
+    partner_id = 6
+    # Pre-fetch all products as a dictionary {id: Product}
+    products_map = {p.id: p for p in session.exec(select(Product)).all()}
+
+    # Pre-fetch all already existing products in partner price table
+    existing_product_ids = set(
+        session.exec(select(PartnerPrice.product_id).where(PartnerPrice.partner_id == partner_id)).all()
+    )
+
     count = 0
     skipped = 0
-    partner_id = 6
     for row in reader:
         product_id = int(row["id"])
-        existing_product = session.get(Product, product_id)
-        if not existing_product:
+        if product_id not in products_map or product_id in existing_product_ids:
             skipped += 1
             continue
 
-        existing_partner_price = session.get(PartnerPrice, (existing_product.id, partner_id))
-        if existing_partner_price:
-            skipped += 1
-            continue
+        price = float(row["price"]) * 95
+        marked_price = float(row["listPrice"]) * 95 if row.get("listPrice") and row["listPrice"].strip() else None
 
         partner_price = PartnerPrice(
-            product_id = existing_product.id,
+            product_id = product_id,
             partner_id = partner_id,
-            partner_price = float(row["price"]) * 95,
-            marked_price = float(row["listPrice"]) * 95,
+            partner_price = price,
+            marked_price = marked_price,
             partner_product_url = row["productURL"],
         )
 
         session.add(partner_price)
-        session.flush()
-        sync_product_table(session, existing_product.id)
+        existing_product_ids.add(product_id)
+
+        # sync_product_table(session, product_id) !!Wrong way
+        # Update the product 'our_deal' in memory (no extra DB queries)
+        product = products_map[product_id]
+        if product.our_deal is None or price < product.our_deal:
+            product.our_deal = price
+            product.marked_price = marked_price
+        session.add(product)
         count += 1
+
+        # Batch commit to reduce memory overhead and save time
+        if count % 2000 == 0:
+            session.commit()
 
     session.commit()
     return {"message": "Partner Price uploaded successfully", "insert_count": count, "skipped": skipped}
