@@ -96,8 +96,8 @@ def seed_partner_price_amazon(file: UploadFile, session: SessionDep, current_use
     reader = csv.DictReader(io.StringIO(decoded_content))
 
     partner_id = 6
-    # Pre-fetch all products as a dictionary {id: Product}
-    products_map = {p.id: p for p in session.exec(select(Product)).all()}
+    # Pre-fetch all products' price as a dictionary {product_id: our_deal}
+    products_price_map = dict(session.exec(select(Product.id, Product.our_deal)).all())
 
     # Pre-fetch all already existing products in partner price table
     existing_product_ids = set(
@@ -108,7 +108,7 @@ def seed_partner_price_amazon(file: UploadFile, session: SessionDep, current_use
     skipped = 0
     for row in reader:
         product_id = int(row["id"])
-        if product_id not in products_map or product_id in existing_product_ids:
+        if product_id not in products_price_map or product_id in existing_product_ids:
             skipped += 1
             continue
 
@@ -128,11 +128,14 @@ def seed_partner_price_amazon(file: UploadFile, session: SessionDep, current_use
 
         # sync_product_table(session, product_id) !!Wrong way
         # Update the product 'our_deal' in memory (no extra DB queries)
-        product = products_map[product_id]
-        if product.our_deal is None or price < product.our_deal:
-            product.our_deal = price
-            product.marked_price = marked_price
-        session.add(product)
+        current_product_price = products_price_map.get(product_id)
+        if current_product_price is None or price < current_product_price:
+            products_price_map[product_id] = price
+            product = session.get(Product, product_id)
+            if product:
+                product.our_deal = price
+                product.marked_price = marked_price
+                session.add(product)
         count += 1
 
         # Batch commit to reduce memory overhead and save time
