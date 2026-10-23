@@ -138,6 +138,7 @@ def seed_partner_price_amazon(file: UploadFile, session: SessionDep, current_use
         # Batch commit to reduce memory overhead and save time
         if count % 2000 == 0:
             session.commit()
+            session.expunge_all() # Clears the 2000 committed objects from RAM
 
     session.commit()
     return {"message": "Partner Price uploaded successfully", "insert_count": count, "skipped": skipped}
