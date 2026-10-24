@@ -14,10 +14,8 @@ export function initFooter() {
               Your trusted deal comparison and discovery platform. We partner with leading e-commerce platforms to bring you exclusive discounted prices and instant promo redemption.
             </p>
             <div class="footer-social">
-              <a href="#" aria-label="Facebook" style="font-size: 1.25rem;">📘</a>
-              <a href="#" aria-label="Twitter" style="font-size: 1.25rem;">🐦</a>
-              <a href="#" aria-label="Instagram" style="font-size: 1.25rem;">📸</a>
-              <a href="#" aria-label="LinkedIn" style="font-size: 1.25rem;">💼</a>
+              <a href="https://www.linkedin.com/in/jayant-kumar-gupta-53365336b/" aria-label="LinkedIn" style="font-size: 1.25rem;">LinkedIn</a>
+              <a href="https://github.com/jayant-kumar-gupta" aria-label="GitHub" style="font-size: 1.25rem;">GitHub</a>
             </div>
           </div>
           
