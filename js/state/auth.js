@@ -145,7 +145,11 @@ export async function updateProfile(profileData) {
 export async function requestPasswordResetOtp(identifier) {
   try {
     const data = await api.post('/login/forgot-password/otp', { identifier });
-    return { success: true, message: data.message || 'An OTP has been sent successfully.' };
+    return { 
+      success: true, 
+      message: data.message || 'An OTP has been sent successfully.',
+      demo_otp: data.demo_otp 
+    };
   } catch (error) {
     return { success: false, message: error.message || 'Failed to send OTP' };
   }

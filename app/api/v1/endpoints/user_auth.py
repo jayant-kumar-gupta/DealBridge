@@ -359,7 +359,7 @@ async def request_otp(details: ForgotPasswordRequest, background_task: Backgroun
     session.add(detail)
     session.commit()
 
-    return {"message": "An OTP has been sent successfully."}
+    return {"message": "An OTP has been sent successfully.", "demo_otp": otp}
 
 # Verifying User's OTP
 @router.post("/forgot-password/verify")

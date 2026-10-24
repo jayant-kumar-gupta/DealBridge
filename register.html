@@ -24,72 +24,94 @@
                 <img src="/assets/images/logo.jpg" alt="DealBridge Logo" width="36" height="36" style="border-radius: 8px;">
                 <span style="font-size: var(--font-size-2xl); font-weight: bold; color: var(--color-text);">DealBridge</span>
             </div>
-            <h1 class="auth-card__title">Create Account</h1>
-            <p class="auth-card__subtitle">Join us and start finding great partner deals today.</p>
-            <form id="register-form" action="javascript:void(0);">
-                <div class="form-group">
-                    <label for="name" class="form-label">Full Name</label>
-                    <input type="text" id="name" class="form-input" placeholder="Enter your full name" required autocomplete="name">
-                </div>
-                <div class="form-group">
-                    <label for="email" class="form-label">Email Address</label>
-                    <input type="email" id="email" class="form-input" placeholder="Enter your email" required autocomplete="email">
-                </div>
-                <div class="form-group">
-                    <label for="phone" class="form-label">Phone Number</label>
-                    <input type="tel" id="phone" class="form-input" placeholder="+91 98765 43210" required autocomplete="tel">
-                </div>
-                <div class="form-group">
-                    <label for="password" class="form-label">Password</label>
-                    <input type="password" id="password" class="form-input" placeholder="Create a strong password" required autocomplete="new-password">
-                    
-                    <!-- Live Password Strength Checker with 5 Checkpoints -->
-                    <div id="password-strength-container" class="password-strength-box" style="margin-top: 10px; padding: 12px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md);">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="font-size: 0.8rem; font-weight: 600; color: var(--color-text);">Password Strength:</span>
-                            <span id="strength-label" style="font-size: 0.78rem; font-weight: 600; color: var(--color-text-secondary);">Too Weak</span>
-                        </div>
-                        <div class="password-strength-meter" style="display: flex; gap: 4px; margin-bottom: 10px; height: 5px; border-radius: 3px; overflow: hidden; background: rgba(0,0,0,0.06);">
-                            <div id="strength-bar-1" style="flex: 1; height: 100%; background: var(--color-border); border-radius: 2px; transition: background-color 0.2s;"></div>
-                            <div id="strength-bar-2" style="flex: 1; height: 100%; background: var(--color-border); border-radius: 2px; transition: background-color 0.2s;"></div>
-                            <div id="strength-bar-3" style="flex: 1; height: 100%; background: var(--color-border); border-radius: 2px; transition: background-color 0.2s;"></div>
-                            <div id="strength-bar-4" style="flex: 1; height: 100%; background: var(--color-border); border-radius: 2px; transition: background-color 0.2s;"></div>
-                            <div id="strength-bar-5" style="flex: 1; height: 100%; background: var(--color-border); border-radius: 2px; transition: background-color 0.2s;"></div>
-                        </div>
+            <!-- SCREEN 1: Registration Form -->
+            <div id="reg-screen-1">
+                <h1 class="auth-card__title">Create Account</h1>
+                <p class="auth-card__subtitle">Join us and start finding great partner deals today.</p>
+                <form id="register-form" action="javascript:void(0);">
+                    <div class="form-group">
+                        <label for="name" class="form-label">Full Name</label>
+                        <input type="text" id="name" class="form-input" placeholder="Enter your full name" required autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" id="email" class="form-input" placeholder="Enter your email" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone" class="form-label">Phone Number</label>
+                        <input type="tel" id="phone" class="form-input" placeholder="+91 98765 43210" required autocomplete="tel">
+                    </div>
+                    <div class="form-group">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" id="password" class="form-input" placeholder="Create a strong password" required autocomplete="new-password">
+                        
+                        <!-- Live Password Strength Checker with 5 Checkpoints -->
+                        <div id="password-strength-container" class="password-strength-box" style="margin-top: 10px; padding: 12px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <span style="font-size: 0.8rem; font-weight: 600; color: var(--color-text);">Password Strength:</span>
+                                <span id="strength-label" style="font-size: 0.78rem; font-weight: 600; color: var(--color-text-secondary);">Too Weak</span>
+                            </div>
+                            <div class="password-strength-meter" style="display: flex; gap: 4px; margin-bottom: 10px; height: 5px; border-radius: 3px; overflow: hidden; background: rgba(0,0,0,0.06);">
+                                <div id="strength-bar-1" style="flex: 1; height: 100%; background: var(--color-border); border-radius: 2px; transition: background-color 0.2s;"></div>
+                                <div id="strength-bar-2" style="flex: 1; height: 100%; background: var(--color-border); border-radius: 2px; transition: background-color 0.2s;"></div>
+                                <div id="strength-bar-3" style="flex: 1; height: 100%; background: var(--color-border); border-radius: 2px; transition: background-color 0.2s;"></div>
+                                <div id="strength-bar-4" style="flex: 1; height: 100%; background: var(--color-border); border-radius: 2px; transition: background-color 0.2s;"></div>
+                                <div id="strength-bar-5" style="flex: 1; height: 100%; background: var(--color-border); border-radius: 2px; transition: background-color 0.2s;"></div>
+                            </div>
 
-                        <div class="password-checkpoints" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem;">
-                            <div class="checkpoint" id="chk-length" style="display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); transition: color 0.2s;">
-                                <span class="chk-icon" style="font-weight: 700; width: 14px; text-align: center;">○</span>
-                                <span class="chk-text">At least 8 characters</span>
-                            </div>
-                            <div class="checkpoint" id="chk-upper" style="display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); transition: color 0.2s;">
-                                <span class="chk-icon" style="font-weight: 700; width: 14px; text-align: center;">○</span>
-                                <span class="chk-text">At least one uppercase letter (A-Z)</span>
-                            </div>
-                            <div class="checkpoint" id="chk-lower" style="display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); transition: color 0.2s;">
-                                <span class="chk-icon" style="font-weight: 700; width: 14px; text-align: center;">○</span>
-                                <span class="chk-text">At least one lowercase letter (a-z)</span>
-                            </div>
-                            <div class="checkpoint" id="chk-digit" style="display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); transition: color 0.2s;">
-                                <span class="chk-icon" style="font-weight: 700; width: 14px; text-align: center;">○</span>
-                                <span class="chk-text">At least one number (0-9)</span>
-                            </div>
-                            <div class="checkpoint" id="chk-special" style="display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); transition: color 0.2s;">
-                                <span class="chk-icon" style="font-weight: 700; width: 14px; text-align: center;">○</span>
-                                <span class="chk-text">At least one special character (!@#$%^&*...)</span>
+                            <div class="password-checkpoints" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem;">
+                                <div class="checkpoint" id="chk-length" style="display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); transition: color 0.2s;">
+                                    <span class="chk-icon" style="font-weight: 700; width: 14px; text-align: center;">○</span>
+                                    <span class="chk-text">At least 8 characters</span>
+                                </div>
+                                <div class="checkpoint" id="chk-upper" style="display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); transition: color 0.2s;">
+                                    <span class="chk-icon" style="font-weight: 700; width: 14px; text-align: center;">○</span>
+                                    <span class="chk-text">At least one uppercase letter (A-Z)</span>
+                                </div>
+                                <div class="checkpoint" id="chk-lower" style="display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); transition: color 0.2s;">
+                                    <span class="chk-icon" style="font-weight: 700; width: 14px; text-align: center;">○</span>
+                                    <span class="chk-text">At least one lowercase letter (a-z)</span>
+                                </div>
+                                <div class="checkpoint" id="chk-digit" style="display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); transition: color 0.2s;">
+                                    <span class="chk-icon" style="font-weight: 700; width: 14px; text-align: center;">○</span>
+                                    <span class="chk-text">At least one number (0-9)</span>
+                                </div>
+                                <div class="checkpoint" id="chk-special" style="display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); transition: color 0.2s;">
+                                    <span class="chk-icon" style="font-weight: 700; width: 14px; text-align: center;">○</span>
+                                    <span class="chk-text">At least one special character (!@#$%^&*...)</span>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label for="confirm-password" class="form-label">Confirm Password</label>
+                        <input type="password" id="confirm-password" class="form-input" placeholder="Confirm your password" required autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top: var(--space-lg);">Continue to Verification</button>
+                </form>
+                <div class="auth-divider">or</div>
+                <div class="auth-card__footer">
+                    Already have an account? <a href="/login.html" style="color: var(--color-primary); font-weight: 500;">Sign in</a>
                 </div>
-                <div class="form-group">
-                    <label for="confirm-password" class="form-label">Confirm Password</label>
-                    <input type="password" id="confirm-password" class="form-input" placeholder="Confirm your password" required autocomplete="new-password">
-                </div>
-                <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top: var(--space-lg);">Create Account</button>
-            </form>
-            <div class="auth-divider">or</div>
-            <div class="auth-card__footer">
-                Already have an account? <a href="/login.html" style="color: var(--color-primary); font-weight: 500;">Sign in</a>
+            </div>
+
+            <!-- SCREEN 2: OTP Verification Screen -->
+            <div id="reg-screen-2" style="display: none;">
+                <h1 class="auth-card__title">Verify Phone Number</h1>
+                <p class="auth-card__subtitle">We have sent a 6-digit verification code to <strong id="reg-phone-display" style="color: var(--color-primary); word-break: break-all;"></strong></p>
+                <form id="reg-otp-form" action="javascript:void(0);">
+                    <div class="form-group">
+                        <label for="reg-otp" class="form-label">Enter 6-Digit OTP</label>
+                        <input type="text" id="reg-otp" class="form-input" placeholder="• • • • • •" maxlength="6" inputmode="numeric" pattern="[0-9]*" style="font-size: 1.4rem; letter-spacing: 0.35em; text-align: center; font-weight: 700;" required autocomplete="one-time-code">
+                    </div>
+
+                    <button type="submit" id="btn-verify-reg" class="btn btn-primary btn-full btn-lg" style="margin-top: var(--space-md);">Verify &amp; Create Account</button>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; font-size: 0.85rem;">
+                        <button type="button" id="btn-reg-resend-otp" style="background: none; border: none; color: var(--color-primary); font-weight: 500; cursor: pointer; padding: 0;">Resend OTP</button>
+                        <button type="button" id="btn-reg-edit-details" style="background: none; border: none; color: var(--color-text-secondary); cursor: pointer; padding: 0;">Edit details</button>
+                    </div>
+                </form>
             </div>
         </div>
     </main>

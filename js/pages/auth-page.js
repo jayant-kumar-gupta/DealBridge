@@ -58,11 +58,25 @@ function initAuthPage() {
     }
 
     const registerForm = document.getElementById('register-form');
+    const regOtpForm = document.getElementById('reg-otp-form');
+    const regScreen1 = document.getElementById('reg-screen-1');
+    const regScreen2 = document.getElementById('reg-screen-2');
+    const regPhoneDisplay = document.getElementById('reg-phone-display');
+    const regOtpInput = document.getElementById('reg-otp');
+    const btnRegResend = document.getElementById('btn-reg-resend-otp');
+    const btnRegEdit = document.getElementById('btn-reg-edit-details');
+
+    let pendingRegistration = null;
+    let expectedOtp = '';
+
+    function generateAndShowRegOtp(phone) {
+        expectedOtp = String(Math.floor(100000 + Math.random() * 900000));
+        showToast(`Demo Mode: Your OTP for ${phone} is ${expectedOtp}`, 'info');
+    }
+
     if (registerForm) {
-        registerForm.addEventListener('submit', async (e) => {
+        registerForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const submitBtn = registerForm.querySelector('button[type="submit"]');
-            const originalText = submitBtn ? submitBtn.textContent : '';
 
             const name = document.getElementById('name').value.trim();
             const email = document.getElementById('email').value.trim();
@@ -81,28 +95,83 @@ function initAuthPage() {
                 return;
             }
 
+            pendingRegistration = { name, email, phone, password };
+
+            // Transition to Screen 2: OTP Verification
+            if (regScreen1 && regScreen2) {
+                regScreen1.style.display = 'none';
+                regScreen2.style.display = 'block';
+            }
+            if (regPhoneDisplay) regPhoneDisplay.textContent = phone;
+            if (regOtpInput) {
+                regOtpInput.value = '';
+                regOtpInput.focus();
+            }
+
+            generateAndShowRegOtp(phone);
+        });
+    }
+
+    if (regOtpForm) {
+        regOtpForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const enteredOtp = regOtpInput ? regOtpInput.value.trim() : '';
+            if (enteredOtp !== expectedOtp) {
+                showToast('Invalid OTP. Please check the code and try again.', 'error');
+                if (regOtpInput) regOtpInput.focus();
+                return;
+            }
+
+            const submitBtn = document.getElementById('btn-verify-reg');
+            const originalText = submitBtn ? submitBtn.textContent : 'Verify & Create Account';
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Creating account...';
             }
 
             try {
-                const result = await register({ name, email, phone, password });
+                const result = await register(pendingRegistration);
                 if (result.success) {
-                    showToast('Registration successful! Redirecting to login...', 'success');
+                    showToast('OTP verified & account created! Redirecting to login...', 'success');
                     setTimeout(() => {
                         window.location.href = '/login.html';
                     }, 1500);
                 } else {
                     showToast(result.message || 'Registration failed', 'error');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = originalText;
+                    }
                 }
             } catch (err) {
                 showToast(err.message || 'An error occurred during registration', 'error');
-            } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.textContent = originalText;
                 }
+            }
+        });
+    }
+
+    if (btnRegResend) {
+        btnRegResend.addEventListener('click', () => {
+            if (pendingRegistration && pendingRegistration.phone) {
+                generateAndShowRegOtp(pendingRegistration.phone);
+                showToast('A new OTP has been sent.', 'success');
+                if (regOtpInput) {
+                    regOtpInput.value = '';
+                    regOtpInput.focus();
+                }
+            }
+        });
+    }
+
+    if (btnRegEdit) {
+        btnRegEdit.addEventListener('click', () => {
+            if (regScreen1 && regScreen2) {
+                regScreen2.style.display = 'none';
+                regScreen1.style.display = 'block';
             }
         });
     }
@@ -254,7 +323,17 @@ function setupForgotPasswordWizard() {
             try {
                 const result = await requestPasswordResetOtp(currentIdentifier);
                 if (result.success) {
-                    showToast('A new OTP has been sent successfully.', 'success');
+                    if (result.demo_otp) {
+                        showToast(`Demo Mode: Your new OTP is ${result.demo_otp}`, "info");
+                        const demoBox = document.getElementById('fp-demo-box');
+                        const demoVal = document.getElementById('fp-demo-otp-val');
+                        if (demoBox && demoVal) {
+                            demoVal.textContent = result.demo_otp;
+                            demoBox.style.display = 'block';
+                        }
+                    } else {
+                        showToast('A new OTP has been sent successfully.', 'success');
+                    }
                 } else {
                     showToast(result.message || 'Failed to resend OTP', 'error');
                 }
@@ -303,7 +382,17 @@ function setupForgotPasswordWizard() {
                     if (fpTargetDisplay) {
                         fpTargetDisplay.textContent = identifier;
                     }
-                    showToast('OTP sent! Please check your notifications.', 'success');
+                    if (result.demo_otp) {
+                        showToast(`Demo Mode: Your OTP is ${result.demo_otp}`, "info");
+                        const demoBox = document.getElementById('fp-demo-box');
+                        const demoVal = document.getElementById('fp-demo-otp-val');
+                        if (demoBox && demoVal) {
+                            demoVal.textContent = result.demo_otp;
+                            demoBox.style.display = 'block';
+                        }
+                    } else {
+                        showToast('OTP sent! Please check your notifications.', 'success');
+                    }
                     setStep(2);
                     if (fpOtpInput) {
                         fpOtpInput.value = '';
