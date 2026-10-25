@@ -38,32 +38,46 @@ def create_order(order_detail: OrderCreate, session: SessionDep, current_user: U
     if not cart_items:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No items in cart")
     
+    # 1. Checking the payment first
+    required_amount = 0.0
+    for item in cart_items:
+        p = item.product or session.get(Product, item.product_id)
+        if not p:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product with ID {item.product_id} not found")
+        unit_price = p.our_deal if (p and p.our_deal is not None) else 0.0
+        required_amount += item.quantity * unit_price
+
+    required_amount = round(required_amount, 2)
+    amount_paid = round(float(order_detail.amount_paid), 2) if order_detail.amount_paid else required_amount
+
+    # Validate payment with a 0.05 float tolerance to account for floating-point rounding
+    if abs(required_amount - amount_paid) > 0.05:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail=f"Payment Not Validated! Required: ₹{required_amount:.2f}, Received: ₹{amount_paid:.2f}"
+        )
+
+    # 2. Create the order only after payment validation succeeds
     order = Order(
         user_id=current_user.id,
         address_id=address.id,
-        amount_paid=order_detail.amount_paid,
+        amount_paid=required_amount,
         promocode=secret_token(),
     )
 
     session.add(order)
     session.flush() # Generates order id
 
-    # Checking the payment
-    required_amount = 0.0
-    for item in cart_items:
-        product = item.product
-        required_amount += round(item.quantity * product.our_deal, 2)
-    if required_amount != order_detail.amount_paid:
-        raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Payment Not Validated!")
-
     # Adding Order Items
     for item in cart_items:
+        p = item.product or session.get(Product, item.product_id)
+        unit_price = p.our_deal if (p and p.our_deal is not None) else 0.0
         order_item = OrderItem(
             order_id=order.id,
             product_id=item.product_id,
             partner_id=item.partner_id,
             quantity=item.quantity,
-            price=item.product.our_deal,
+            price=unit_price,
         )
         session.add(order_item)
         session.flush()

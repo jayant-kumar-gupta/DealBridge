@@ -348,12 +348,8 @@ async function handlePayment() {
     btn.textContent = 'Processing Payment...';
 
     try {
-        // Compute required total matching backend calculation:
-        // required_amount += round(item.quantity * product.our_deal, 2)
-        const totalAmount = Math.round(cart.reduce((sum, item) => {
-            const price = Number(item.price ?? item.our_deal ?? 0);
-            return sum + Math.round(item.quantity * price * 100) / 100;
-        }, 0) * 100) / 100;
+        // Compute required total matching cart total calculation
+        const totalAmount = Math.round((getCartTotal() || 0) * 100) / 100;
 
         const orderResult = await api.post('/orders/', {
             amount_paid: totalAmount
