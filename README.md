@@ -1,55 +1,172 @@
-# DealBridge 
+<p align="center">
+  <img src="assets/images/logo.jpg" alt="DealBridge Logo" width="80" />
+</p>
 
-DealBridge is a high-performance, full-stack e-commerce deal discovery and price comparison platform. It aggregates partner offers across major retailers, computes platform-exclusive negotiated deals, and enables a seamless shopping journey with interactive analytics.
+<h1 align="center">DealBridge</h1>
 
-The platform is built with **FastAPI (Python)** on the backend, **PostgreSQL with SQLModel** for relational data persistence, and **Vanilla HTML5, CSS3, and JavaScript (ES Modules)** on the frontend.
+<p align="center">
+  <strong>Smarter Choices, Better Products</strong><br/>
+  A full-stack e-commerce price comparison platform that aggregates partner offers, computes platform-exclusive deals, and delivers a seamless shopping experience.
+</p>
+
+<p align="center">
+  <a href="https://dealbridge-9aa9.onrender.com">🌐 Live Demo</a> &nbsp;·&nbsp;
+  <a href="#-features">✨ Features</a> &nbsp;·&nbsp;
+  <a href="#%EF%B8%8F-getting-started">⚙️ Setup Guide</a> &nbsp;·&nbsp;
+  <a href="#-seeding-the-database">🌱 Seed Data</a> &nbsp;·&nbsp;
+  <a href="#-api-documentation">📖 API Docs</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License" />
+  <img src="https://img.shields.io/badge/Deployed_on-Render-46E3B7?logo=render&logoColor=white" alt="Render" />
+</p>
 
 ---
 
-## 🚀 Tech Stack
+## 📸 Screenshots
 
-- **Backend:** FastAPI, SQLModel (SQLAlchemy ORM), Pydantic v2, PostgreSQL, `pwdlib` (Argon2 / Bcrypt), PyJWT, `secrets`.
-- **Frontend:** Vanilla HTML5, CSS3 (Custom CSS variables, dark mode support, responsive grid/flexbox), Vanilla JavaScript (ES Modules, Async/Await Fetch API, Canvas 2D API for charts).
-- **Architecture:** Layered REST API (`/api/v1`), JWT Bearer Token Authentication, Background Task Execution.
+| Homepage | Product Page |
+|----------|-------------|
+| ![Homepage](assets/screenshots/homepage.png) | ![Product Page](assets/screenshots/product-page.png) |
 
 ---
 
-## ⚙️ Getting Started & How to Run
+## ✨ Features
 
-Follow these steps to set up and run DealBridge locally on your machine.
+### 🛒 Shopping Experience
+- **Smart Price Comparison** — Compare prices across multiple retail partners on a single product page
+- **Deal Calculation Engine** — Automatically computes the best deal based on the lowest partner rate
+- **Product Catalog** — Browse 50,000+ products organized across 248 categories with search, filters, and brand grouping
+- **Price History Charts** — Interactive Canvas-based line charts showing historical price trends (1M / 6M / 1Y toggles)
+
+### 🔐 Authentication & Security
+- **JWT Authentication** — OAuth2-based login with secure JSON Web Tokens
+- **OTP Verification** — 6-digit OTP generation for registration and password reset (demo mode shows OTP in the UI)
+- **Role-Based Access Control** — Admin vs Customer permissions on sensitive endpoints
+- **Password Security** — Argon2 password hashing with strict complexity validation
+
+### 🛍️ Cart & Checkout
+- **Persistent Shopping Cart** — Add/remove items with quantity adjustments
+- **Address Management** — Save multiple shipping addresses with default selection
+- **Order Snapshots** — Checkout captures exact item prices at the time of purchase
+- **Payment Validation** — Server-side total verification with floating-point tolerance
+
+### ⭐ Ratings & Community
+- **Product Ratings** — Submit ratings that update a rolling average
+- **Reviews & Comments** — Community discussion with authentication-protected posting
+- **Wishlist** — Save favorite products with real-time state sync across pages
+
+### 🔧 Admin Dashboard
+- Manage categories, products, partners, prices, users, orders, and reviews from a dedicated admin panel
+
+---
+
+## 🏗️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | FastAPI · SQLModel (SQLAlchemy ORM) · Pydantic v2 · PyJWT · pwdlib (Argon2) |
+| **Database** | PostgreSQL · Alembic (migrations) |
+| **Frontend** | Vanilla HTML5 · CSS3 (custom properties, dark theme) · JavaScript ES Modules |
+| **Deployment** | Render (web service) · Supabase (managed PostgreSQL) · Gunicorn |
+
+---
+
+## ⚙️ Getting Started
+
+Follow these steps to set up DealBridge locally on your machine.
 
 ### Prerequisites
 
-- **Python 3.10+** (Python 3.12+ recommended)
-- **PostgreSQL** installed and running locally
-- **Git**
+| Tool | Purpose |
+|------|---------|
+| **Python 3.10+** | Runtime (3.12+ recommended) |
+| **PostgreSQL 14+** | Database engine |
+| **pgAdmin 4** *(optional)* | GUI for managing PostgreSQL |
+| **Git** | Version control |
 
 ---
 
-### Step 1: Clone the Repository & Navigate to Project
+### Step 1 — Install PostgreSQL & pgAdmin
+
+#### On Ubuntu / Debian:
+```bash
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+```
+
+#### On Windows / macOS:
+Download and install from [postgresql.org/download](https://www.postgresql.org/download/). The installer includes pgAdmin.
+
+For pgAdmin separately: [pgadmin.org/download](https://www.pgadmin.org/download/)
+
+---
+
+### Step 2 — Create a PostgreSQL User and Database
+
+Open a terminal and switch to the PostgreSQL shell:
 
 ```bash
-git clone https://github.com/your-username/DealBridge.git
+sudo -u postgres psql
+```
+
+Run the following SQL commands to create a dedicated user and database:
+
+```sql
+-- 1. Create a new user with a password
+CREATE USER dealbridge_user WITH PASSWORD 'your_strong_password';
+
+-- 2. Create the database
+CREATE DATABASE dealbridge_db;
+
+-- 3. Grant all privileges on the database to the user
+GRANT ALL PRIVILEGES ON DATABASE dealbridge_db TO dealbridge_user;
+
+-- 4. Connect to the database and grant schema permissions
+\c dealbridge_db
+GRANT ALL ON SCHEMA public TO dealbridge_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO dealbridge_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO dealbridge_user;
+
+-- 5. Exit
+\q
+```
+
+> **💡 Tip:** If using **pgAdmin**, you can do the same via the GUI:
+> 1. Right-click **Login/Group Roles** → **Create** → **Login/Group Role** → set name and password under the **Definition** tab, enable **Can login?** under **Privileges**
+> 2. Right-click **Databases** → **Create** → **Database** → set name, set Owner to the user you created
+> 3. The owner automatically gets full privileges on the database
+
+---
+
+### Step 3 — Clone the Repository
+
+```bash
+git clone https://github.com/jayant-kumar-gupta/DealBridge.git
 cd DealBridge
 ```
 
 ---
 
-### Step 2: Create and Activate a Virtual Environment
+### Step 4 — Create & Activate Virtual Environment
 
 ```bash
-# On Linux / macOS:
+# Linux / macOS
 python3 -m venv .venv
 source .venv/bin/activate
 
-# On Windows:
+# Windows
 python -m venv .venv
 .venv\Scripts\activate
 ```
 
 ---
 
-### Step 3: Install Dependencies
+### Step 5 — Install Dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -57,101 +174,209 @@ pip install -r requirements.txt
 
 ---
 
-### Step 4: Configure Environment Variables
+### Step 6 — Create the `.env` File
 
-Create a `.env` file in the project root (you can base it on the template below):
+Create a file named `.env` in the project root with the following variables:
 
 ```env
 PROJECT_NAME="DealBridge API"
-DATABASE_URL="postgresql://<username>:<password>@localhost:5432/dealbridge_db"
-SECRET_KEY="your-super-secret-jwt-key-here"
+DATABASE_URL="postgresql+psycopg2://dealbridge_user:your_strong_password@localhost:5432/dealbridge_db"
+SECRET_KEY="generate-a-long-random-secret-key-here"
 
-# Admin Credentials (Optional / Seed)
-EMAIL="admin.dealbridge@gmail.com"
-ADMIN_PASSWORD="YourStrongPassword123!"
+# Admin credentials (used to create the first admin account)
+EMAIL="admin@dealbridge.com"
+ADMIN_PASSWORD="YourAdminPassword123!"
 ```
 
-> **Note:** Ensure a PostgreSQL database named `dealbridge_db` (or whatever you specify in `DATABASE_URL`) exists on your PostgreSQL server:
-> ```sql
-> CREATE DATABASE dealbridge_db;
-> ```
+> **⚠️ Important:**
+> - Replace `dealbridge_user` and `your_strong_password` with the PostgreSQL user and password you created in Step 2.
+> - Generate a strong `SECRET_KEY` — you can use: `python -c "import secrets; print(secrets.token_hex(32))"`
+> - The `ADMIN_PASSWORD` must contain: uppercase, lowercase, number, and special character (minimum 8 characters).
 
 ---
 
-### Step 5: Start the Server
-
-Run the development server using Uvicorn:
+### Step 7 — Start the Server
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-When the server starts:
-- The `lifespan` handler automatically creates all required database tables if they do not exist.
-- FastAPI serves both the REST API endpoints and all static frontend assets (HTML, CSS, JS, images).
+On startup, the **lifespan handler** automatically creates all required database tables.
 
 ---
 
-### Step 6: Access the Application
+### Step 8 — Access the Application
 
-- **Frontend Website:** [http://localhost:8000/](http://localhost:8000/)
-- **Interactive API Documentation (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Alternative API Documentation (ReDoc):** [http://localhost:8000/redoc](http://localhost:8000/redoc)
-- **API Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
-
----
-
-## 🛠️ What Has Been Built Till Now
-
-### 1. Authentication & Security
-- **JWT Authentication:** OAuth2 password flow issuing JSON Web Tokens stored securely in the browser.
-- **Role-Based Access Control (RBAC):** Admin vs. Customer permissions on sensitive endpoints (product mutations, admin registration).
-- **Password Security:** Password hashing via `pwdlib` and strict password complexity validation (uppercase, lowercase, numeric, special characters, minimum length).
-- **OTP Password Reset Pipeline:**
-  - Cryptographically secure 6-digit OTP generation via Python's `secrets` module.
-  - Asynchronous dispatch using FastAPI `BackgroundTasks` (non-blocking SMS/email delivery).
-  - Secure storage using hashed OTPs in PostgreSQL (`OTPVerification`).
-  - Brute-force protection with max 5 failed attempts per OTP before automatic invalidation.
-  - Expiration enforcement (10-minute validity window).
-  - Atomic password reset via `PUT /api/v1/login/reset-password`.
-
-### 2. Product Catalog & Data Modeling
-- **Relational Schema:** Clean normalization across `Category`, `Product`, `Partner`, `PartnerPrice`, `ProductSpec`, `Tag`, `ProductTag`, and `ProductPriceHistory`.
-- **Pre-Seeded Catalog:** 24 comprehensive products complete with brands, categories, high-resolution images, technical specifications, and searchable tags.
-- **Multi-Partner Pricing:** Products linked to multiple retail partners with live stock tracking and distinct retail rates.
-- **Deal Calculation Engine:** Dynamic calculation of `our_deal` pricing based on the lowest partner rate with platform discount rules.
-
-### 3. Price Analytics & Visual Trends
-- **Price History Tracking:** Composite primary key `(product_id, partner_id, date)` recording multi-partner historical fluctuations over 1–6 months.
-- **Canvas Price Trend Chart:** Native HTML5 Canvas line graph on the product detail page with time-range toggles (1M, 6M, 1Y), min/max stats, and interactive visual indicators.
-
-### 4. Interactive Ratings, Reviews & Wishlist
-- **Product Ratings:** User-submitted ratings updating rolling average rating (`avg_rating`) and total rating counts.
-- **Discussion & Comments:** Community review section with authentication prompts and BOLA/IDOR protection (users can only delete their own comments).
-- **Wishlist:** Interactive client-side wishlist management with real-time state synchronization across product cards and detail views.
-
-### 5. Cart, Addresses & Order Checkout
-- **Cart Management:** Persistent shopping cart with quantity adjustments and partner-specific item bindings.
-- **Address Book:** Customer shipping addresses with default address designation.
-- **Snapshot Order Architecture:** Checkout flow capturing exact item snapshot prices (`OrderItem`), stock decrementing, and promo code redemption.
+| Service | URL |
+|---------|-----|
+| 🌐 **Frontend Website** | [http://localhost:8000](http://localhost:8000) |
+| 📖 **Swagger API Docs** | [http://localhost:8000/docs](http://localhost:8000/docs) |
+| 📋 **ReDoc API Docs** | [http://localhost:8000/redoc](http://localhost:8000/redoc) |
+| ❤️ **Health Check** | [http://localhost:8000/health](http://localhost:8000/health) |
 
 ---
 
-## 🔮 Future Roadmap & Upcoming Features
+## 🌱 Seeding the Database
 
-### 1. Bulk Product Ingestion Endpoint (`POST /api/v1/products/bulk-upload`)
-- **Admin File Uploads:** Ingesting large-scale e-commerce datasets (e.g. Kaggle Flipkart/Amazon datasets) directly into the database.
-- **Streaming Ingestion:** Leveraging FastAPI `UploadFile` and Python's in-memory `csv.DictReader` to stream and parse thousands of products without memory spikes.
-- **Automated Entity Resolution:** Auto-mapping categories, auto-generating slugs, and returning detailed row-by-row validation reports.
+DealBridge ships with an **Amazon product dataset** located in the [`Amazon-product-dataset/`](Amazon-product-dataset/) folder:
 
-### 2. Live Partner-Seller Comparison & Multi-Seller Checkout
-*(Replacing the "Partner-Sellers feature coming soon" section on `product.html`)*
-- **Direct Partner Price Comparison:** A live comparison table showcasing real-time prices across all verified retail partners for that product.
-- **Multi-Seller Fulfillment:** Allowing buyers to select which specific partner fulfills their order, unlocking specific partner warranty and delivery terms.
-- **Direct Savings Highlighting:** Dynamic side-by-side comparison showing exact monetary savings against competitor retail prices.
+| File | Records | Description |
+|------|---------|-------------|
+| `amazon_categories.csv` | 248 | Product categories with icons |
+| `amazon_products_50k.csv` | 50,000 | Products with titles, images, brands, prices |
+| `amazon_products_400k.csv` | 400,000 | Extended dataset (same schema) |
 
-### 3. Production Readiness & DevOps
-- **Alembic Database Migrations:** Replacing ad-hoc table updates with version-controlled database migration scripts.
-- **Dockerization:** Complete `Dockerfile` and `docker-compose.yml` orchestrating FastAPI and PostgreSQL in isolated containers.
-- **Redis In-Memory Caching:** Offloading short-lived OTP tokens and caching high-traffic catalog queries to eliminate repeated database reads.
-- **Automated Testing Suite:** End-to-end integration and unit tests using `pytest` and `httpx`.
+### Seed Steps
+
+The seeding endpoints are **admin-only** and use the Swagger UI for file uploads.
+
+#### 1. Register & Login as Admin
+
+1. Open the website at [http://localhost:8000](http://localhost:8000)
+2. Click **Register** and create an account using the **email** and **password** from your `.env` file (`EMAIL` and `ADMIN_PASSWORD`)
+3. Complete the OTP verification (in demo mode, the OTP is displayed on the screen)
+4. Log in with the admin credentials
+
+#### 2. Get Your Auth Token
+
+1. Open [http://localhost:8000/docs](http://localhost:8000/docs) (Swagger UI)
+2. Click the **🔒 Authorize** button (top right)
+3. Enter your admin email and password → click **Authorize**
+
+#### 3. Seed Categories (must be done first)
+
+1. In Swagger UI, find **Seed Database** → `POST /api/v1/seed/l-file-categories`
+2. Click **Try it out**
+3. Upload `Amazon-product-dataset/amazon_categories.csv`
+4. Click **Execute**
+5. Expected response: `"insert_count": 248`
+
+#### 4. Seed Products
+
+1. Find `POST /api/v1/seed/l-file-products`
+2. Upload `Amazon-product-dataset/amazon_products_50k.csv`
+3. Click **Execute**
+4. Expected response: `"insert_count": ~47027` (rows with invalid `category_id` are skipped)
+
+> **📝 Note:** You can use `amazon_products_400k.csv` instead for a larger catalog. The endpoint processes rows in batches of 2,000 for memory efficiency.
+
+#### 5. Seed Partner Prices (Amazon)
+
+Before seeding partner prices, you need at least one partner in the database. The dataset is configured to use **partner ID 6** (Amazon).
+
+1. In Swagger UI, find **Partners** → `POST /api/v1/partners/` and create a partner:
+   ```json
+   {
+     "name": "Amazon",
+     "badge_color": "#FF9900",
+     "website_url": "https://www.amazon.com"
+   }
+   ```
+   Repeat this for as many partners as you need (the 6th partner created will have `id: 6`).
+
+   Alternatively, create 6 partners so the IDs align:
+   | # | Name | Badge Color | Website |
+   |---|------|------------|---------|
+   | 1 | MegaMart | `#E74C3C` | `https://megamart.com` |
+   | 2 | QuickShop | `#3498DB` | `https://quickshop.com` |
+   | 3 | PrimeDeals | `#2ECC71` | `https://primedeals.com` |
+   | 4 | ValueStore | `#F39C12` | `https://valuestore.com` |
+   | 5 | TechBay | `#9B59B6` | `https://techbay.com` |
+   | 6 | Amazon | `#FF9900` | `https://amazon.com` |
+
+2. Find `POST /api/v1/seed/l-file-partner-price-amazon`
+3. Upload `Amazon-product-dataset/amazon_products_50k.csv` (the same file — it contains price data)
+4. Click **Execute**
+5. Expected response: partner prices inserted for all seeded products
+
+> **💡 Tip:** If the upload times out (large files over slow connections), simply re-upload the same file. The endpoint automatically skips already-inserted records and picks up where it left off.
+
+---
+
+## 📖 API Documentation
+
+DealBridge exposes a RESTful API under the `/api/v1` prefix. All endpoints are fully documented and testable via:
+
+- **Swagger UI** → [http://localhost:8000/docs](http://localhost:8000/docs)
+- **ReDoc** → [http://localhost:8000/redoc](http://localhost:8000/redoc)
+
+### API Endpoint Groups
+
+| Group | Prefix | Description |
+|-------|--------|-------------|
+| Auth | `/api/v1/login`, `/api/v1/register` | Registration, login, OTP, password reset |
+| Categories | `/api/v1/categories` | CRUD for product categories |
+| Products | `/api/v1/products` | Product catalog, search, filtering |
+| Partners | `/api/v1/partners` | Retail partner management |
+| Partner Prices | `/api/v1/partner-price` | Multi-partner pricing per product |
+| Ratings & Reviews | `/api/v1/ratings` | Ratings, comments, reviews |
+| Cart | `/api/v1/cart` | Shopping cart operations |
+| Orders | `/api/v1/orders` | Checkout, order history |
+| Addresses | `/api/v1/addresses` | Shipping address management |
+| Tags | `/api/v1/tags` | Product tagging |
+| Price History | `/api/v1/price-history` | Historical price tracking |
+| Seed Database | `/api/v1/seed` | Bulk data import (admin only) |
+
+---
+
+## 📁 Project Structure
+
+```
+DealBridge/
+├── app/
+│   ├── main.py                 # FastAPI app, middleware, router registration
+│   ├── api/v1/endpoints/       # All API route handlers
+│   │   ├── user_auth.py        # Auth, login, registration, OTP
+│   │   ├── categories.py       # Category CRUD
+│   │   ├── products.py         # Product CRUD + search
+│   │   ├── partners.py         # Partner management
+│   │   ├── partner_price.py    # Partner pricing
+│   │   ├── orders.py           # Checkout + order management
+│   │   ├── seed_database.py    # Bulk CSV import endpoints
+│   │   └── ...                 # ratings, carts, addresses, tags, etc.
+│   ├── core/
+│   │   ├── config.py           # Pydantic settings (reads .env)
+│   │   ├── database.py         # SQLModel engine + session
+│   │   └── utils.py            # Shared utilities
+│   ├── models/
+│   │   └── database.py         # All SQLModel table definitions
+│   └── schemas/                # Pydantic request/response schemas
+├── js/
+│   ├── components/             # Reusable UI components (header, footer, toast, modal)
+│   ├── pages/                  # Page-specific logic (home, product, cart, checkout)
+│   ├── state/                  # Client-side state management (auth, cart, wishlist)
+│   └── utils/                  # API client, helpers, router
+├── css/                        # Stylesheets (variables, base, components, responsive)
+├── admin/                      # Admin dashboard HTML pages
+├── assets/
+│   ├── images/                 # Logo and static images
+│   └── screenshots/            # README screenshots
+├── Amazon-product-dataset/     # CSV datasets for seeding
+│   ├── amazon_categories.csv   # 248 categories
+│   ├── amazon_products_50k.csv # 50K products
+│   └── amazon_products_400k.csv# 400K products
+├── alembic/                    # Database migration scripts
+├── requirements.txt            # Python dependencies
+├── .env                        # Environment variables (not committed)
+├── .gitignore
+├── LICENSE                     # MIT License
+└── README.md
+```
+
+---
+
+## 🌐 Live Demo
+
+The project is deployed and accessible at:
+
+### 🔗 **[https://dealbridge-9aa9.onrender.com](https://dealbridge-9aa9.onrender.com)**
+
+> **📝 Note:** The app is hosted on Render's free tier. The first request may take 30–60 seconds as the server spins up from a cold start.
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+**© 2026 Jayant Kumar Gupta**
