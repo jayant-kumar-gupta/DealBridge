@@ -169,9 +169,9 @@ def seed_partner_price_amazon(
         session.add(partner_price)
         existing_product_ids.add(product_id)
 
-        # Update the product 'our_deal' in memory (no extra DB queries)
+        # Update the product 'our_deal' in memory (no extra DB queries) for valid positive prices
         current_product_price = products_price_map.get(product_id)
-        if current_product_price is None or price < current_product_price:
+        if price > 0 and (current_product_price is None or current_product_price <= 0 or price < current_product_price):
             products_price_map[product_id] = price
             product = session.get(Product, product_id)
             if product:

@@ -60,17 +60,22 @@ def create_cart(
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
 
-    # Determine partner_id: lowest price partner if not specified
+    # Determine partner_id: lowest valid (> 0) price partner if not specified
     if not cart_detail.partner_id:
         cheapest_partner = session.exec(
             select(PartnerPrice)
-            .where(PartnerPrice.product_id == cart_detail.product_id)
+            .where(PartnerPrice.product_id == cart_detail.product_id, PartnerPrice.partner_price > 0)
             .order_by(PartnerPrice.partner_price.asc())
         ).first()
 
         if cheapest_partner:
             partner_id = cheapest_partner.partner_id
         else:
+            if not product.our_deal or product.our_deal <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Price is not currently available for this product",
+                )
             first_partner = session.exec(select(Partner)).first()
             if not first_partner:
                 raise HTTPException(
@@ -82,6 +87,12 @@ def create_cart(
         partner = session.get(Partner, cart_detail.partner_id)
         if not partner:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Partner not found")
+        partner_offer = session.get(PartnerPrice, (cart_detail.product_id, cart_detail.partner_id))
+        if partner_offer is not None and partner_offer.partner_price <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Price is not currently available from this retail partner",
+            )
         partner_id = cart_detail.partner_id
 
     cart = session.get(Cart, (current_user.id, cart_detail.product_id))

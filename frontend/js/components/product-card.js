@@ -5,8 +5,9 @@ import { showToast } from './toast.js';
 
 export function renderProductCard(product) {
   const ourDeal = product.our_deal != null ? Number(product.our_deal) : (product.ourPrice != null ? Number(product.ourPrice) : null);
+  const hasPrice = ourDeal != null && ourDeal > 0;
   const markedPrice = product.marked_price != null ? Number(product.marked_price) : null;
-  const hasDiscount = markedPrice != null && ourDeal != null && markedPrice > ourDeal;
+  const hasDiscount = hasPrice && markedPrice != null && markedPrice > ourDeal;
   const originalPrice = hasDiscount ? markedPrice : null;
   const savings = hasDiscount ? (markedPrice - ourDeal) : null;
   const discountPercent = hasDiscount ? Math.round(((markedPrice - ourDeal) / markedPrice) * 100) : null;
@@ -43,7 +44,7 @@ export function renderProductCard(product) {
         <span>${formattedRating}</span>
         <span class="product-card__review-count">(${ratingCount.toLocaleString()})</span>
       </div>
-      ${ourDeal != null
+      ${hasPrice
       ?
       `<div class="product-card__pricing">
         ${originalPrice ? `<span class="product-card__original-price">${formatPrice(originalPrice)}</span>` : ''}
@@ -56,8 +57,8 @@ export function renderProductCard(product) {
       </div>`
     }
     <div class="product-card__actions">
-      <button class="btn btn-primary btn-sm btn-full add-to-cart-btn" data-product-id="${product.id}">
-        ${inCart ? '&#10003; In Cart' : '&#128722; Add to Cart'}
+      <button class="btn ${hasPrice || inCart ? 'btn-primary' : 'btn-secondary'} btn-sm btn-full add-to-cart-btn" data-product-id="${product.id}" ${!hasPrice && !inCart ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''}>
+        ${inCart ? '&#10003; In Cart' : (hasPrice ? '&#128722; Add to Cart' : 'Unavailable')}
       </button>
     </div>
   `;
@@ -81,7 +82,11 @@ export function renderProductCard(product) {
     addCartBtn.addEventListener('click', (e) => {
       e.preventDefault();
       if (!isInCart(product.id)) {
-        const unitPrice = ourDeal != null ? ourDeal : 0;
+        if (!hasPrice) {
+          showToast('Price is not available for this product', 'info');
+          return;
+        }
+        const unitPrice = ourDeal;
         const origPrice = markedPrice != null && markedPrice > unitPrice ? markedPrice : unitPrice;
         const actualSavings = Math.max(0, origPrice - unitPrice);
         addToCart(product.id, 1, {

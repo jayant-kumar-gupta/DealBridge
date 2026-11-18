@@ -99,8 +99,9 @@ async function renderWishlist() {
         const name = escapeHtml(product.name || 'Product');
         const brand = escapeHtml(product.brand || '');
         const price = product.our_deal != null ? Number(product.our_deal) : 0;
+        const hasPrice = price > 0;
         const markedPrice = product.marked_price != null ? Number(product.marked_price) : null;
-        const hasDiscount = markedPrice != null && price > 0 && markedPrice > price;
+        const hasDiscount = hasPrice && markedPrice != null && markedPrice > price;
         const originalPrice = hasDiscount ? markedPrice : 0;
         const savings = hasDiscount ? (markedPrice - price) : 0;
         const discountPercent = hasDiscount ? Math.round((savings / markedPrice) * 100) : 0;
@@ -137,15 +138,19 @@ async function renderWishlist() {
                     </div>
                     
                     <div style="margin-top: auto; margin-bottom: var(--space-md);">
+                        ${hasPrice ? `
                         <div style="display: flex; align-items: baseline; gap: 8px;">
                             <span style="font-size: var(--font-size-xl); font-weight: 700; color: var(--color-deal);">${formatPrice(price)}</span>
                             ${originalPrice > price ? `<span style="font-size: var(--font-size-sm); color: var(--color-text-muted); text-decoration: line-through;">${formatPrice(originalPrice)}</span>` : ''}
                         </div>
                         ${savings > 0 ? `<div style="color: var(--color-deal); font-size: var(--font-size-xs); font-weight: 500; margin-top: 2px;">Save ${formatPrice(savings)}</div>` : ''}
+                        ` : `
+                        <div style="font-size: 0.95rem; font-weight: 600; color: var(--color-text-secondary);">Price Not Available</div>
+                        `}
                     </div>
                     
-                    <button class="btn btn-primary btn-full add-cart-btn" data-id="${id}">
-                        ${inCart ? '✓ In Cart' : '🛒 Add to Cart'}
+                    <button class="btn ${hasPrice || inCart ? 'btn-primary' : 'btn-secondary'} btn-full add-cart-btn" data-id="${id}" ${!hasPrice && !inCart ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''}>
+                        ${inCart ? '✓ In Cart' : (hasPrice ? '🛒 Add to Cart' : 'Unavailable')}
                     </button>
                 </div>
             </div>
@@ -179,6 +184,10 @@ function attachWishlistEvents(productsList) {
 
             if (!isInCart(id)) {
                 const unitPrice = product.our_deal != null ? Number(product.our_deal) : 0;
+                if (unitPrice <= 0) {
+                    showToast('Price is not available for this product', 'info');
+                    return;
+                }
                 const markedPrice = product.marked_price != null ? Number(product.marked_price) : null;
                 const origPrice = markedPrice != null && markedPrice > unitPrice ? markedPrice : unitPrice;
                 let image = product.image_path || '/assets/images/placeholder.jpg';

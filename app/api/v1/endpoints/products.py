@@ -44,25 +44,32 @@ def _build_product_filter_query(
     if deals_only:
         statement = statement.where(
             Product.our_deal.is_not(None),
+            Product.our_deal > 0,
             Product.marked_price.is_not(None),
             Product.marked_price > Product.our_deal,
         )
-    effective_price = func.coalesce(Product.our_deal, Product.marked_price, 0.0)
+    valid_price = case(
+        ((Product.our_deal.is_not(None)) & (Product.our_deal > 0), Product.our_deal),
+        else_=None,
+    )
     if min_price is not None and min_price > 0:
-        statement = statement.where(effective_price >= min_price)
+        statement = statement.where(valid_price.is_not(None), valid_price >= min_price)
     if max_price is not None and max_price > 0:
-        statement = statement.where(effective_price <= max_price)
+        statement = statement.where(valid_price.is_not(None), valid_price <= max_price)
     return statement
 
 
 def _apply_product_sort(statement, sort_by: str | None):
     if not sort_by or sort_by == "relevance":
         return statement
-    effective_price = func.coalesce(Product.our_deal, Product.marked_price, 0.0)
+    effective_price = case(
+        ((Product.our_deal.is_not(None)) & (Product.our_deal > 0), Product.our_deal),
+        else_=None,
+    )
     if sort_by == "price-low":
-        return statement.order_by(effective_price.asc(), Product.id.asc())
+        return statement.order_by(effective_price.asc().nullslast(), Product.id.asc())
     if sort_by == "price-high":
-        return statement.order_by(effective_price.desc(), Product.id.asc())
+        return statement.order_by(effective_price.desc().nullslast(), Product.id.asc())
     if sort_by == "rating":
         return statement.order_by(Product.avg_rating.desc(), Product.rating_count.desc(), Product.id.asc())
     if sort_by == "name-asc":
@@ -73,6 +80,7 @@ def _apply_product_sort(statement, sort_by: str | None):
         discount_pct = case(
             (
                 (Product.our_deal.is_not(None))
+                & (Product.our_deal > 0)
                 & (Product.marked_price.is_not(None))
                 & (Product.marked_price > Product.our_deal)
                 & (Product.marked_price > 0),
@@ -85,6 +93,7 @@ def _apply_product_sort(statement, sort_by: str | None):
         savings_amt = case(
             (
                 (Product.our_deal.is_not(None))
+                & (Product.our_deal > 0)
                 & (Product.marked_price.is_not(None))
                 & (Product.marked_price > Product.our_deal),
                 Product.marked_price - Product.our_deal,

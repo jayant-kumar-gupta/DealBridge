@@ -121,6 +121,21 @@ function populateProductDetails(productDetail, categoryName) {
     if (prodPriceEl) {
         prodPriceEl.textContent = ourPrice > 0 ? formatPrice(ourPrice) : 'Price Not Available';
     }
+
+    const addCartBtn = document.getElementById('btn-add-cart');
+    const buyNowBtn = document.getElementById('btn-buy-now');
+    if (ourPrice <= 0) {
+        if (addCartBtn) {
+            addCartBtn.disabled = true;
+            addCartBtn.style.opacity = '0.55';
+            addCartBtn.style.cursor = 'not-allowed';
+        }
+        if (buyNowBtn) {
+            buyNowBtn.disabled = true;
+            buyNowBtn.style.opacity = '0.55';
+            buyNowBtn.style.cursor = 'not-allowed';
+        }
+    }
     
     const prodOrigEl = document.getElementById('prod-original');
     const prodDiscEl = document.getElementById('prod-discount');

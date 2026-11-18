@@ -17,7 +17,7 @@ def sync_product_table(
 
     cheapest_price = session.exec(
         select(PartnerPrice)
-        .where(PartnerPrice.product_id == product.id)
+        .where(PartnerPrice.product_id == product.id, PartnerPrice.partner_price > 0)
         .order_by(PartnerPrice.partner_price.asc())
     ).first()
 
