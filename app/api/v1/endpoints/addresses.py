@@ -8,24 +8,32 @@ from app.core.utils import get_current_user
 
 router = APIRouter(prefix="/addresses", tags=["Addresses"])
 
+
 # Creating Address
 @router.post("/", response_model=AddressRead, status_code=status.HTTP_201_CREATED)
-def create_address(detail: AddressCreate, session: SessionDep, current_user: User = Depends(get_current_user)):
+def create_address(
+    detail: AddressCreate,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
     if detail.isdefault:
-        existing = session.exec(select(Address).where(Address.user_id == current_user.id, Address.isdefault == True)).first()
-
-        if existing:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Address already set to default")
+        existing_defaults = session.exec(
+            select(Address).where(Address.user_id == current_user.id, Address.isdefault == True)
+        ).all()
+        for old_default in existing_defaults:
+            old_default.isdefault = False
+            session.add(old_default)
 
     address = Address(
         user_id=current_user.id,
-        name= f"{current_user.firstname or ""} {current_user.lastname or ""}",
-        phone = current_user.phone,
+        name=f"{current_user.firstname or ''} {current_user.lastname or ''}".strip() or None,
+        phone=current_user.phone,
         address_line1=detail.address_line1,
         address_line2=detail.address_line2,
         city=detail.city,
         state=detail.state,
         pincode=detail.pincode,
+        type=detail.type or "Home",
         isdefault=detail.isdefault,
     )
 
@@ -35,20 +43,28 @@ def create_address(detail: AddressCreate, session: SessionDep, current_user: Use
 
     return address
 
+
 # Reading Address
 @router.get("/", response_model=List[AddressRead])
-def read_address(session: SessionDep, current_user: User  = Depends(get_current_user)):
+def read_address(
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
     address = session.exec(select(Address).where(Address.user_id == current_user.id)).all()
-
-    if not address:
-        return []
-
     return list(address)
+
 
 # Update Address
 @router.put("/{id}", response_model=AddressRead)
-def update_address(id: int, detail: AddressCreate, session: SessionDep, current_user: User = Depends(get_current_user)):
-    address = session.exec(select(Address).where(Address.id == id, Address.user_id == current_user.id)).first()
+def update_address(
+    id: int,
+    detail: AddressCreate,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    address = session.exec(
+        select(Address).where(Address.id == id, Address.user_id == current_user.id)
+    ).first()
 
     if not address:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="address not found!")
@@ -58,14 +74,17 @@ def update_address(id: int, detail: AddressCreate, session: SessionDep, current_
     address.state = detail.state
     address.city = detail.city
     address.pincode = detail.pincode
-    
+    address.type = detail.type or address.type
+
     if detail.isdefault:
-        existing_default = session.exec(select(Address).where(
-            Address.isdefault == True,
-            Address.id != id, # If a user edits details (e.g., street or pincode) on an address that is already default, querying Address.id != id prevents unnecessary self-modification.
-            Address.user_id == current_user.id
-        )).first()
-        if existing_default:
+        existing_defaults = session.exec(
+            select(Address).where(
+                Address.isdefault == True,
+                Address.id != id,
+                Address.user_id == current_user.id,
+            )
+        ).all()
+        for existing_default in existing_defaults:
             existing_default.isdefault = False
             session.add(existing_default)
 
@@ -73,13 +92,21 @@ def update_address(id: int, detail: AddressCreate, session: SessionDep, current_
 
     session.add(address)
     session.commit()
+    session.refresh(address)
 
     return address
 
+
 # Deleting Address
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_address(id: int, session: SessionDep, current_user: User = Depends(get_current_user)):
-    address = session.exec(select(Address).where(Address.id == id, Address.user_id == current_user.id)).first()
+def delete_address(
+    id: int,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    address = session.exec(
+        select(Address).where(Address.id == id, Address.user_id == current_user.id)
+    ).first()
 
     if not address:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="address not found!")

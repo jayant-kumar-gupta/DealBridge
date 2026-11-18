@@ -20,10 +20,18 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    op.add_column("product", 
-                  sa.Column("marked_price", sa.Float(), nullable=True))
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    cols = {c['name'] for c in inspector.get_columns('product')}
+    if 'marked_price' not in cols:
+        op.add_column('product', sa.Column('marked_price', sa.Float(), nullable=True))
 
 
 def downgrade() -> None:
     """Downgrade schema."""
-    op.drop_column("product", "marked_price")
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    cols = {c['name'] for c in inspector.get_columns('product')}
+    if 'marked_price' in cols:
+        with op.batch_alter_table('product') as batch_op:
+            batch_op.drop_column('marked_price')

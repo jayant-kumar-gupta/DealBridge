@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/images/logo.jpg" alt="DealBridge Logo" width="80" />
+  <img src="frontend/assets/images/logo.jpg" alt="DealBridge Logo" width="80" />
 </p>
 
 <h1 align="center">DealBridge</h1>
@@ -31,7 +31,7 @@
 
 | Homepage | Product Page |
 |----------|-------------|
-| ![Homepage](assets/screenshots/homepage.png) | ![Product Page](assets/screenshots/product-page.png) |
+| ![Homepage](frontend/assets/screenshots/homepage.png) | ![Product Page](frontend/assets/screenshots/product-page.png) |
 
 ---
 
@@ -341,16 +341,18 @@ DealBridge/
 │   ├── models/
 │   │   └── database.py         # All SQLModel table definitions
 │   └── schemas/                # Pydantic request/response schemas
-├── js/
-│   ├── components/             # Reusable UI components (header, footer, toast, modal)
-│   ├── pages/                  # Page-specific logic (home, product, cart, checkout)
-│   ├── state/                  # Client-side state management (auth, cart, wishlist)
-│   └── utils/                  # API client, helpers, router
-├── css/                        # Stylesheets (variables, base, components, responsive)
-├── admin/                      # Admin dashboard HTML pages
-├── assets/
-│   ├── images/                 # Logo and static images
-│   └── screenshots/            # README screenshots
+├── frontend/
+│   ├── js/
+│   │   ├── components/         # Reusable UI components (header, footer, toast, modal)
+│   │   ├── pages/              # Page-specific logic (home, product, cart, checkout)
+│   │   ├── state/              # Client-side state management (auth, cart, wishlist)
+│   │   └── utils/              # API client, helpers, router
+│   ├── css/                    # Stylesheets (variables, base, components, responsive)
+│   ├── admin/                  # Admin dashboard HTML pages
+│   ├── assets/
+│   │   ├── images/             # Logo and static images
+│   │   └── screenshots/        # README screenshots
+│   └── *.html                  # Public storefront pages
 ├── Amazon-product-dataset/     # CSV datasets for seeding
 │   ├── amazon_categories.csv   # 248 categories
 │   ├── amazon_products_50k.csv # 50K products

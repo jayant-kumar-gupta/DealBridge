@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
-from app.api.v1.endpoints.user_auth import require_admin
+from app.core.utils import require_admin
 from app.core.database import SessionDep
 from app.models.database import Product, ProductSpec, User
 from app.schemas.product_spec import (

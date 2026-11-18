@@ -3,7 +3,7 @@ from typing import List
 from app.core.database import SessionDep
 from sqlmodel import select, func
 from app.models.database import User, Partner
-from app.api.v1.endpoints.user_auth import require_admin
+from app.core.utils import require_admin
 from app.schemas.partners import PartnerCreate, PartnerRead
 
 router = APIRouter(prefix="/partners", tags=["partner"])

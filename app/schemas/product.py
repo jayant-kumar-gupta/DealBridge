@@ -34,9 +34,10 @@ class PartnerPrice(BaseModel):
     product_id: int
     partner_id: int
     partner_price: float
-    stock_count: int
+    marked_price: float | None = None
+    stock_count: int | None = 0
     partner_product_url: str | None = None
-    date: datetime
+    date: datetime | None = None
 
 class ProductDetailRead(BaseModel):
     product_info: ProductRead

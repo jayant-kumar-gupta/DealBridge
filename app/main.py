@@ -20,14 +20,16 @@ app.add_middleware(
     allow_credentials=True, # Allows cookies and Authorization headers
     allow_methods=["*"], # Allows all standard HTTP methods: GET, POST, PUT, DELETE, OPTIONS
     allow_headers=["*"], # Allows all request headers (e.g. Content-Type, Authorization)
+    expose_headers=["X-Total-Count"],
 )
 
 @app.middleware("http")
 async def disable_cache_for_static(request, call_next):
     response = await call_next(request)
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
+    if not request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     return response
 
 app.include_router(categories.router, prefix="/api/v1")
@@ -53,6 +55,6 @@ def health_check():
 
 app.mount(
     "/",
-    StaticFiles(directory=".", html=True),
+    StaticFiles(directory="frontend", html=True),
     name="static",
 )

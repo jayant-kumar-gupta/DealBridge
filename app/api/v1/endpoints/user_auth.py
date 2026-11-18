@@ -1,11 +1,12 @@
 from typing import Annotated, List
-from fastapi import APIRouter, HTTPException, status, Depends, Request, Query
-from sqlmodel import select
+from fastapi import APIRouter, HTTPException, status, Depends, Request, Query, Response
+from sqlmodel import func, select
 from app.schemas.users import UserRegister, UserLoginResponse, AdminRegister, UserRead, UserUpdate, ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest
 from app.core.database import SessionDep
 from app.models.database import User, OTPVerification
-from app.core.utils import hash, verify, create_access_token, get_current_user
+from app.core.utils import hash, verify, create_access_token, get_current_user, require_admin
 from fastapi import BackgroundTasks
+import os
 import secrets
 from datetime import datetime, timezone, timedelta
 
@@ -73,12 +74,6 @@ def build_user_read(user: User) -> UserRead:
         joinDate=join_date_str,
         avatar=None,
     )
-
-
-def require_admin(current_user: User = Depends(get_current_user)):
-    if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not allowed to access this page.")
-    return current_user
 
 
 @router.post(
@@ -172,10 +167,13 @@ def get_current_user_profile(current_user: User = Depends(get_current_user)):
 @router.get("/users", response_model=List[UserRead])
 async def get_all_users(
     session: SessionDep,
-    limit: Annotated[int, Query(le=50)] = 50,
-    offset: int = 0,
+    response: Response,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
     current_user: User = Depends(require_admin),
     ):
+    total = session.exec(select(func.count()).select_from(User)).one()
+    response.headers["X-Total-Count"] = str(total)
     users = session.exec(select(User).offset(offset).limit(limit)).all()
     if not users:
         return []
@@ -218,11 +216,39 @@ def update_current_user_profile(
 
 
 @router.get("/{user_id}", response_model=UserRead)
-def get_user_by_id(user_id: int, session: SessionDep):
+def get_user_by_id(
+    user_id: int,
+    session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.id != user_id and not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view this user's profile.",
+        )
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return build_user_read(user)
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user_by_id(
+    user_id: int,
+    session: SessionDep,
+    current_admin: User = Depends(require_admin),
+):
+    if current_admin.id == user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot delete your own account.",
+        )
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    session.delete(user)
+    session.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -295,17 +321,18 @@ def create_admin(session: SessionDep, admin_credentials: AdminRegister, current_
 
 @router.put("/reset-password")
 async def reset_password(details: ResetPasswordRequest, session: SessionDep):
-    if "@" in details.identifier:
-        user = session.exec(select(User).where(User.email == details.identifier)).first()
+    identifier = details.identifier.strip()
+    if "@" in identifier:
+        user = session.exec(select(User).where(User.email == identifier)).first()
     else:
-        user = session.exec(select(User).where(User.phone == details.identifier)).first()
+        user = session.exec(select(User).where(User.phone == identifier)).first()
 
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP.")
 
     otp = session.exec(select(OTPVerification).where(OTPVerification.user_id == user.id)).first()
     if not otp:
-        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="Request Timeout! Try reseting password again")
+        raise HTTPException(status_code=status.HTTP_408_REQUEST_TIMEOUT, detail="OTP expired or not found. Try generating a new one.")
 
     check_otp_expiry(otp, session)
 
@@ -314,14 +341,17 @@ async def reset_password(details: ResetPasswordRequest, session: SessionDep):
             raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="Password is not strong!")
         user.password = hash(details.new_password)
     else:
-        if otp.attempts == 5:
+        otp.attempts += 1
+        if otp.attempts >= 5:
             session.delete(otp)
             session.commit()
             raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="You exceeded the max attempt. Try generating new OTP.")
-        otp.attempts += 1
         session.add(otp)
         session.commit()
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Something went wrong!")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid OTP. Attempts remaining: {5 - otp.attempts}",
+        )
 
     session.add(user)
     session.delete(otp)
@@ -335,10 +365,11 @@ async def reset_password(details: ResetPasswordRequest, session: SessionDep):
 # Generating and Sending OTP
 @router.post("/forgot-password/otp")
 async def request_otp(details: ForgotPasswordRequest, background_task: BackgroundTasks, session: SessionDep):
-    if "@" in details.identifier:
-        user = session.exec(select(User).where(User.email == details.identifier)).first()
+    identifier = details.identifier.strip()
+    if "@" in identifier:
+        user = session.exec(select(User).where(User.email == identifier)).first()
     else:
-        user = session.exec(select(User).where(User.phone == details.identifier)).first()
+        user = session.exec(select(User).where(User.phone == identifier)).first()
 
     if not user:
         return {"message": "An OTP has been sent successfully."}
@@ -349,7 +380,7 @@ async def request_otp(details: ForgotPasswordRequest, background_task: Backgroun
         session.delete(old_otp)
     
     otp = create_otp()
-    background_task.add_task(send_otp, otp, email=details.identifier)
+    background_task.add_task(send_otp, otp, email=identifier)
 
     detail = OTPVerification(
         user_id=user.id,
@@ -359,31 +390,35 @@ async def request_otp(details: ForgotPasswordRequest, background_task: Backgroun
     session.add(detail)
     session.commit()
 
-    return {"message": "An OTP has been sent successfully.", "demo_otp": otp}
+    response_payload = {"message": "An OTP has been sent successfully."}
+    if os.getenv("DEMO_MODE", "true").lower() in ("1", "true", "yes"):
+        response_payload["demo_otp"] = otp
+    return response_payload
 
 # Verifying User's OTP
 @router.post("/forgot-password/verify")
 async def read_otp(details: VerifyOTPRequest, session: SessionDep):
-    if "@" in details.identifier:
-        user = session.exec(select(User).where(User.email == details.identifier)).first()
+    identifier = details.identifier.strip()
+    if "@" in identifier:
+        user = session.exec(select(User).where(User.email == identifier)).first()
     else:
-        user = session.exec(select(User).where(User.phone == details.identifier)).first()
+        user = session.exec(select(User).where(User.phone == identifier)).first()
 
     if not user:
-        return {"message": "OTP not matched. Try again!"}
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP.")
 
     target = session.exec(select(OTPVerification).where(OTPVerification.user_id == user.id)).first()
     if not target:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OTP not found")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired OTP.")
 
     check_otp_expiry(target, session)
     
     if not verify(str(details.otp), target.otp):
-        if target.attempts == 5:
+        target.attempts += 1
+        if target.attempts >= 5:
             session.delete(target)
             session.commit()
             raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="You exceeded the max attempt. Try generating new OTP.")
-        target.attempts += 1
         session.add(target)
         session.commit()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Wrong OTP. Try again! Attempts remaining: {5 - target.attempts}")
